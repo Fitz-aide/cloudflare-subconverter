@@ -1,55 +1,55 @@
 /**
- * 完整增强版 Worker
- * 支持环境变量 origin (通过 wrangler.toml 配置)
- * 修复了重名节点、HTML 拦截、变量丢失等问题
+ * 融合修复版：GitHub 模板支持 + 暴力 URL 提取逻辑
  */
 
 export default {
   async fetch(request, env) {
     const reqUrl = new URL(request.url);
-    const subUrl = reqUrl.searchParams.get("url");
     
-    if (!subUrl) return new Response("缺少订阅地址 (?url=xxx)", { status: 400 });
+    // 1. 【核心修复】：沿用旧版的暴力 URL 提取逻辑，防止 & 符号截断订阅地址
+    let subUrl = "";
+    const urlMatch = reqUrl.search.match(/url=([^&]*)/) || reqUrl.search.match(/url=(.*)/);
+    if (urlMatch) {
+      subUrl = decodeURIComponent(urlMatch[1]);
+    } else {
+      return new Response("Missing url", { status: 400 });
+    }
 
-    // 1. 获取 GitHub 模板 (从环境变量 origin 读取)
+    // 2. 获取 GitHub 模板 (从变量 origin 读取)
     const githubRawUrl = env.origin;
-    if (!githubRawUrl) return new Response("环境变量 origin 未配置", { status: 500 });
+    if (!githubRawUrl) return new Response("Error: wrangler.toml 中未配置 origin 变量", { status: 500 });
 
     let template = "";
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const tResp = await fetch(githubRawUrl, { signal: controller.signal });
-      if (!tResp.ok) throw new Error(`Status: ${tResp.status}`);
+      const tResp = await fetch(githubRawUrl);
+      if (!tResp.ok) throw new Error();
       template = await tResp.text();
-      clearTimeout(timeoutId);
     } catch (e) {
-      return new Response(`读取 GitHub 模板失败: ${e.message}`, { status: 500 });
+      return new Response("Error: 无法读取 GitHub 模板，请检查 origin 变量中的链接是否为 Raw 地址", { status: 500 });
     }
 
-    // 2. 抓取并解析节点
+    // 3. 抓取并解析节点
     const urls = subUrl.split("|");
     let proxies = [];
+    
     for (const u of urls) {
       try {
-        const resp = await fetch(u.trim(), { 
-          headers: { "User-Agent": "ClashMeta; Mihomo; sub-web" } 
+        const resp = await fetch(u.trim(), {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
         });
         let text = await resp.text();
-        
-        // 过滤 HTML
-        if (!text || text.includes("<html") || text.includes("<!DOCTYPE")) continue;
+        if (!text || text.includes("<html")) continue;
 
+        // 尝试 Base64 解码 (采用旧版简单的 atob 逻辑进行初筛)
         let content = text.trim();
-        // 尝试解码 Base64
         try {
-          if (!content.includes("://")) {
-            const decoded = safeBase64Decode(content);
-            if (decoded.includes("://")) content = decoded;
-          }
-        } catch (e) {}
-        
-        for (let line of content.split(/\r?\n/)) {
+          content = safeBase64Decode(content);
+        } catch (e) {
+          // 解码失败说明可能是明文，保持原样
+        }
+
+        const lines = content.split(/\r?\n/);
+        for (let line of lines) {
           line = line.trim();
           if (!line || line.startsWith("#")) continue;
 
@@ -59,13 +59,13 @@ export default {
           else if (line.startsWith("vmess://")) p = parseVmess(line);
           else if (line.startsWith("hysteria2://")) p = parseHy2(line);
           else if (line.startsWith("tuic://")) p = parseTuic(line);
-          
+
           if (p && p.server) {
-            // 防止同名节点导致 Clash 报错
+            // 防止同名节点
             let baseName = p.name;
             let counter = 1;
             while (proxies.some(x => x.name === p.name)) {
-              p.name = `${baseName} (${counter++})`;
+              p.name = `${baseName}_${counter++}`;
             }
             proxies.push(p);
           }
@@ -74,10 +74,10 @@ export default {
     }
 
     if (proxies.length === 0) {
-      return new Response("未能解析到任何节点，请检查订阅源格式是否正确 (支持 Base64 或明文链接)", { status: 500 });
+      return new Response("Error: 未能解析到有效节点。请确保订阅链接返回的是 Base64 或明文标准协议。", { status: 500 });
     }
 
-    // 3. 国家分类
+    // 4. 按国家分类（用于填充模板分组）
     const groups = { HK: [], JP: [], US: [], SG: [], TW: [], CA: [] };
     proxies.forEach(p => {
       const name = p.name.toUpperCase();
@@ -89,16 +89,15 @@ export default {
       else if (name.includes("CA") || name.includes("加拿大")) groups.CA.push(p.name);
     });
 
-    // 4. 生成 YAML
+    // 5. 注入到模板并返回
     const finalYaml = injectProxies(template, proxies, groups);
-
     return new Response(finalYaml, {
       headers: { "Content-Type": "text/yaml; charset=utf-8" }
     });
   }
 };
 
-// --- 以下是辅助函数 ---
+// --- 辅助工具函数 ---
 
 function injectProxies(template, proxies, groups) {
   let lines = template.split('\n');
@@ -109,7 +108,6 @@ function injectProxies(template, proxies, groups) {
 
     if (line.trim() === 'proxies:') {
       proxies.forEach(p => result.push(generateProxyItem(p)));
-      // 跳过模板原有示例
       while(i + 1 < lines.length && (lines[i+1].trim().startsWith('-') || lines[i+1].trim() === '')) i++;
     }
 
@@ -149,17 +147,19 @@ function generateProxyItem(p) {
   return str;
 }
 
-// 协议解析器 (保持不变，已在之前的版本中给出)
-function parseVless(line) { try { const url = new URL(line); const params = url.searchParams; let proxy = { name: decodeURIComponent(url.hash.slice(1)) || url.hostname, type: "vless", server: url.hostname, port: parseInt(url.port), uuid: url.username, cipher: "auto" }; const network = params.get("type") || "tcp"; proxy["network"] = network; const security = params.get("security") || "none"; proxy["tls"] = ["tls", "reality"].includes(security); if (params.has("sni")) proxy["servername"] = params.get("sni"); if (network === "ws") proxy["ws-opts"] = { path: params.get("path") || "/", headers: params.get("host") ? { Host: params.get("host") } : {} }; if (security === "reality") proxy["reality-opts"] = { "public-key": params.get("pbk") || "", "short-id": params.get("sid") || "" }; return proxy; } catch(e){return null;} }
-function parseVmess(line) { try { const base64Str = line.replace("vmess://", "").trim(); const vmess = JSON.parse(safeBase64Decode(base64Str)); let proxy = { name: vmess.ps, type: "vmess", server: vmess.add, port: parseInt(vmess.port), uuid: vmess.id, alterId: parseInt(vmess.aid || 0), cipher: vmess.scy || "auto", tls: vmess.tls === "tls", network: vmess.net || "tcp" }; if (vmess.net === "ws") proxy["ws-opts"] = { path: vmess.path || "/", headers: vmess.host ? { Host: vmess.host } : {} }; return proxy; } catch(e){return null;} }
-function parseSS(line) { try { const url = new URL(line); let auth = url.username; if (!auth.includes(':')) auth = safeBase64Decode(auth); const [method, password] = auth.split(':'); return { name: decodeURIComponent(url.hash.slice(1)) || url.hostname, type: "ss", server: url.hostname, port: parseInt(url.port), cipher: method, password: password }; } catch(e){return null;} }
-function parseHy2(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)) || url.hostname, type: "hysteria2", server: url.hostname, port: parseInt(url.port), password: url.username, udp: true }; } catch(e){return null;} }
-function parseTuic(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)) || url.hostname, type: "tuic", server: url.hostname, port: parseInt(url.port), uuid: url.username, password: url.password, version: 5 }; } catch(e){return null;} }
+// 协议解析器
+function parseVless(line) { try { const url = new URL(line); const params = url.searchParams; let p = { name: decodeURIComponent(url.hash.slice(1)) || url.hostname, type: "vless", server: url.hostname, port: parseInt(url.port), uuid: url.username, cipher: "auto", tls: url.search.includes("tls") || url.search.includes("reality"), network: params.get("type") || "tcp" }; if (params.has("sni")) p.servername = params.get("sni"); if (p.network === "ws") p["ws-opts"] = { path: params.get("path") || "/", headers: { Host: params.get("host") || "" } }; if (url.search.includes("reality")) p["reality-opts"] = { "public-key": params.get("pbk") || "", "short-id": params.get("sid") || "" }; return p; } catch(e){return null;} }
+function parseVmess(line) { try { const v = JSON.parse(safeBase64Decode(line.replace("vmess://", ""))); return { name: v.ps, type: "vmess", server: v.add, port: parseInt(v.port), uuid: v.id, alterId: parseInt(v.aid || 0), cipher: "auto", tls: v.tls === "tls", network: v.net || "tcp" }; } catch(e){return null;} }
+function parseSS(line) { try { const url = new URL(line); let auth = safeBase64Decode(url.username); const [m, pw] = auth.split(':'); return { name: decodeURIComponent(url.hash.slice(1)), type: "ss", server: url.hostname, port: parseInt(url.port), cipher: m, password: pw }; } catch(e){return null;} }
+function parseHy2(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)), type: "hysteria2", server: url.hostname, port: parseInt(url.port), password: url.username, udp: true }; } catch(e){return null;} }
+function parseTuic(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)), type: "tuic", server: url.hostname, port: parseInt(url.port), uuid: url.username, password: url.password, version: 5 }; } catch(e){return null;} }
 
 function safeBase64Decode(str) {
   try {
     let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
     while (base64.length % 4) base64 += '=';
     return decodeURIComponent(escape(atob(base64)));
-  } catch (e) { return str; }
+  } catch (e) {
+    return atob(str); // 兜底使用原始 atob
+  }
 }
