@@ -6,26 +6,77 @@ export default {
   async fetch(request, env) {
     const reqUrl = new URL(request.url);
     
-    // 1. 【核心修复】：沿用旧版的暴力 URL 提取逻辑，防止 & 符号截断订阅地址
-    let subUrl = "";
-    const urlMatch = reqUrl.search.match(/url=([^&]*)/) || reqUrl.search.match(/url=(.*)/);
-    if (urlMatch) {
-      subUrl = decodeURIComponent(urlMatch[1]);
-    } else {
-      return new Response("Missing url", { status: 400 });
+    // 1. 【完美提取 URL】：自动拼合被意外截断的参数，无需正则，兼容性 100%
+    let subUrl = reqUrl.searchParams.get("url");
+    if (!subUrl) {
+      return new Response("Missing url (请在 URL 后添加 ?url=订阅地址)", { status: 400 });
+    }
+    
+    // 重新拼回带有 & 的参数（例如 &token=srvuhzdj），同时排除 worker 自己的参数
+    reqUrl.searchParams.forEach((value, key) => {
+      if (key !== "url" && key !== "name") {
+        subUrl += `&${key}=${value}`;
+      }
+    });
+
+    const name = reqUrl.searchParams.get("name") || "SUB";
+
+    // 支持多订阅地址，用 | 分隔
+    const urls = subUrl.split("|");
+    let allLines = [];
+
+    for (const u of urls) {
+      let text = "";
+      try {
+        const resp = await fetch(u.trim(), {
+          headers: {
+            "User-Agent": "ClashMeta; Mihomo", // 伪装客户端防屏蔽
+            "Accept": "*/*",
+            "Referer": u
+          }
+        });
+        text = await resp.text();
+      } catch (e) {
+        console.log(`Fetch failed: ${u} ${e}`);
+        continue;
+      }
+
+      if (!text || text.includes("<html")) continue;
+
+      // 2. 【核心修复】：使用兼容性极强的 safeBase64Decode 替代原生 atob
+      try {
+        // 先判断是否已经是明文协议，如果不是再尝试解码
+        if (!text.includes("://")) {
+          const decoded = safeBase64Decode(text.trim());
+          if (decoded.includes("://")) {
+            text = decoded;
+          }
+        }
+      } catch (e) {}
+
+      allLines.push(...text.split(/\r?\n/));
     }
 
-    // 2. 获取 GitHub 模板 (从变量 origin 读取)
-    const githubRawUrl = env.origin;
-    if (!githubRawUrl) return new Response("Error: wrangler.toml 中未配置 origin 变量", { status: 500 });
+    let proxies = [];
+    for (let line of allLines) {
+      line = line.trim();
+      if (!line || line.startsWith("#")) continue;
 
-    let template = "";
-    try {
-      const tResp = await fetch(githubRawUrl);
-      if (!tResp.ok) throw new Error();
-      template = await tResp.text();
-    } catch (e) {
-      return new Response("Error: 无法读取 GitHub 模板，请检查 origin 变量中的链接是否为 Raw 地址", { status: 500 });
+      let proxy = null;
+      if (line.startsWith("vmess://")) proxy = parseVmess(line);
+      else if (line.startsWith("vless://")) proxy = parseVless(line);
+      else if (line.startsWith("ss://")) proxy = parseSS(line);
+      else if (line.startsWith("hysteria2://")) proxy = parseHy2(line);
+      else if (line.startsWith("tuic://")) proxy = parseTuic(line);
+
+      if (!proxy) continue;
+      
+      proxies.push(proxy);
+    }
+
+    // 调试反馈：如果确实没抓到，给个提示
+    if (proxies.length === 0) {
+      return new Response("未能解析到任何有效节点，请检查机场订阅链接是否可用。", { status: 500 });
     }
 
     // 3. 抓取并解析节点
