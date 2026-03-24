@@ -1,0 +1,3 @@
+name = "sub-converter" # 你的 Worker 名称
+main = "worker.js"      # 你的入口文件名（如果是 index.js）
+compatibility_date = "2026-03-24" # 建议设置为当前日期
