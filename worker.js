@@ -27,25 +27,56 @@ export default {
       return new Response(`无法读取 GitHub 模板: ${e.message}`, { status: 500 });
     }
 
-    // 2. 抓取并解析节点 (复用你之前的逻辑)
+    // 2. 抓取并解析节点 (修复了返回 HTML 的问题)
     const urls = subUrl.split("|");
     let proxies = [];
     for (const u of urls) {
       try {
-        const resp = await fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } });
+        const resp = await fetch(u, { 
+          headers: { 
+            // 模拟 Clash 客户端，防止机场返回 HTML 拦截页
+            "User-Agent": "ClashMeta; Mihomo; sub-web" 
+          } 
+        });
+        
         let text = await resp.text();
-        try { text = safeBase64Decode(text.trim()); } catch {}
+
+        // 【关键修复 1】：如果返回内容包含 HTML 标签，说明抓错链接了，直接跳过
+        if (text.includes("<html") || text.includes("<!DOCTYPE")) {
+          console.error(`跳过非法链接: ${u} 返回了 HTML`);
+          continue; 
+        }
+
+        // 尝试 Base64 解码 (增加 trim 移除空格)
+        try { 
+          const decoded = safeBase64Decode(text.trim()); 
+          // 只有解码后包含协议头才替换，否则保持原样（处理明文链接）
+          if (decoded.includes("://")) {
+            text = decoded; 
+          }
+        } catch (e) {}
         
         for (let line of text.split("\n")) {
           let p = null;
+          line = line.trim();
+          if (!line) continue;
+          
           if (line.startsWith("ss://")) p = parseSS(line);
           else if (line.startsWith("vless://")) p = parseVless(line);
           else if (line.startsWith("vmess://")) p = parseVmess(line);
           else if (line.startsWith("hysteria2://")) p = parseHy2(line);
           else if (line.startsWith("tuic://")) p = parseTuic(line);
+          
           if (p) proxies.push(p);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error(`请求订阅源出错: ${u}`, e);
+      }
+    }
+
+    // 【关键修复 2】：调试信息。如果还是抓不到节点，返回一个提示
+    if (proxies.length === 0) {
+      return new Response("Error: 未能从订阅链接中解析到任何有效节点。请检查订阅链接是否正确，或者是否为纯文本/Base64 格式。", { status: 500 });
     }
 
     // 3. 动态处理：按国家分类（用于填充你的模板分组）
