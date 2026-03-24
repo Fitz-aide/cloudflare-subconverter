@@ -1,42 +1,64 @@
 /**
  * 完整可替换 Worker 版本
  * 支持 Clash.Meta 全配置 + tuic/hysteria2/vmess/vless/ss
- * 模板注入版 (带基础配置兜底)
+ * 纯 origin.yaml 模板驱动版 + 自动策略分组归类
  */
+
+// ================= 1. 核心配置区 =================
+const DEFAULT_TEMPLATE_URL = "https://raw.githubusercontent.com/你的用户名/你的仓库/main/origin.yaml"; 
+
+// ================= 2. 策略组分类配置区 =================
+// 填入需要包含【所有节点】的策略组名称
+const ALL_PROXIES_GROUPS = [
+  "🌎社媒", 
+  "🕸GPT", 
+  "🎧Spotify", 
+  "🚀最低延迟", 
+  "♻️自动切换", 
+  "⚖️负载均衡"
+];
+
+// 填入地区匹配规则：keywords 是匹配节点名称的关键词，groups 是目标策略组名称
+const REGION_RULES = [
+  { keywords: ["HK", "Hong", "Kong", "香港"], groups: ["🚀🇭🇰HK最低延迟", "♻️🇭🇰HK自动切换"] },
+  { keywords: ["JP", "Japan", "日本"], groups: ["🚀🇯🇵JP最低延迟", "♻️🇯🇵JP自动切换"] },
+  { keywords: ["SG", "Singapore", "狮城", "新加坡"], groups: ["🚀🇸🇬SG最低延迟", "♻️🇸🇬SG自动切换"] },
+  { keywords: ["TW", "Taiwan", "台湾", "新北"], groups: ["🚀🇹🇼TW最低延迟", "♻️🇹🇼TW自动切换"] },
+  { keywords: ["US", "America", "美国"], groups: ["🚀🇺🇸US最低延迟", "♻️🇺🇸US自动切换"] },
+  { keywords: ["CA", "Canada", "加拿大"], groups: ["🚀🇨🇦CA最低延迟", "♻️🇨🇦CA自动切换"] },
+  { keywords: ["UK", "United Kingdom", "英国"], groups: ["🚀🇬🇧UK最低延迟", "♻️🇬🇧UK自动切换"] }
+];
+// =======================================================
 
 export default {
   async fetch(request, env) {
     const reqUrl = new URL(request.url);
     
-    // 修复：暴力提取 url= 后面的所有内容，防止带有 & 的参数被错误截断
     let subUrl = "";
     const urlMatch = reqUrl.search.match(/url=(.*)/);
     if (urlMatch) {
       subUrl = urlMatch[1];
     } else {
-      return new Response("Missing url", { status: 400 });
+      return new Response("缺少订阅地址 (Missing url)", { status: 400 });
     }
 
-    const name = reqUrl.searchParams.get("name") || "SUB";
+    if (!subUrl) return new Response("缺少订阅地址", { status: 400 });
 
-    if (!subUrl) {
-      return new Response("Missing url", { status: 400 });
-    }
-
-    // --- 新增逻辑：获取 origin.yaml 模板 ---
+    const templateUrl = (env && env.origin) ? env.origin : DEFAULT_TEMPLATE_URL;
     let template = "";
-    if (env && env.origin) {
-      try {
-        const tResp = await fetch(env.origin);
-        if (tResp.ok) {
-          template = await tResp.text();
-        }
-      } catch (e) {
-        console.log(`Fetch template failed: ${e}`);
+    try {
+      const tResp = await fetch(templateUrl);
+      if (tResp.ok) {
+        template = await tResp.text();
       }
+    } catch (e) {
+      console.log(`模板拉取失败: ${e}`);
     }
 
-    // 支持多订阅地址，用 | 分隔
+    if (!template) {
+      return new Response("无法读取 origin.yaml 模板，请检查链接是否正确或公开访问权限。", { status: 500 });
+    }
+
     const urls = subUrl.split("|");
     let allLines = [];
 
@@ -52,12 +74,11 @@ export default {
         });
         text = await resp.text();
       } catch (e) {
-        console.log(`Fetch failed: ${u} ${e}`);
+        console.log(`节点抓取失败: ${u} ${e}`);
       }
 
       if (!text) continue;
 
-      // 尝试 Base64 解码
       try {
         text = atob(text.trim());
       } catch {}
@@ -75,27 +96,22 @@ export default {
       if (line.startsWith("vmess://")) proxy = parseVmess(line);
       else if (line.startsWith("vless://")) proxy = parseVless(line);
       else if (line.startsWith("ss://")) proxy = parseSS(line);
-      else if (line.startsWith("hysteria2://")) proxy = parseHy2(line);
+      else if (line.startsWith("hysteria2://") || line.startsWith("hy2://")) proxy = parseHy2(line);
       else if (line.startsWith("tuic://")) proxy = parseTuic(line);
 
       if (!proxy) continue;
       
-      // 清理节点名中的非法字符，防止破坏 YAML 结构
-      proxy.name = proxy.name.replace(/[\[\]]/g, '').trim();
+      // 清理非法字符并去除双引号，防止 YAML 语法断裂
+      proxy.name = proxy.name.replace(/[\[\]"]/g, '').trim();
       proxies.push(proxy);
     }
 
     if (proxies.length === 0) {
-      return new Response("未解析到任何有效节点", { status: 500 });
+      return new Response("未解析到任何有效节点，请检查订阅地址", { status: 500 });
     }
 
-    // --- 核心分支：如果有模板则注入，否则用基础版 ---
-    let finalYaml = "";
-    if (template) {
-      finalYaml = injectProxies(template, proxies);
-    } else {
-      finalYaml = buildFullClash(proxies);
-    }
+    // 执行核心的注入与分类逻辑
+    const finalYaml = buildFullClash(template, proxies);
 
     return new Response(finalYaml, {
       headers: { "Content-Type": "text/yaml; charset=utf-8" }
@@ -103,19 +119,20 @@ export default {
   }
 };
 
-// --- 新增函数：注入节点到模板 ---
-function injectProxies(template, proxies) {
+// --- 核心：生成节点 -> 注入模板 -> 按地区归类策略组 (追加模式) ---
+function buildFullClash(template, proxies) {
   let proxyYaml = "proxies:\n";
+  const allNames = [];
   
-  // 完全复用你 buildFullClash 里面久经考验的 YAML 生成逻辑
+  // 1. 生成 proxies: 块并收集所有节点名称
   for (const p of proxies) {
+    allNames.push(p.name);
     proxyYaml += `  - name: "${p.name}"\n`;
     proxyYaml += `    type: ${p.type}\n`;
     proxyYaml += `    server: ${p.server}\n`;
     proxyYaml += `    port: ${p.port}\n`;
 
     const skip = ['name', 'type', 'server', 'port', '_country'];
-    
     for (const [key, value] of Object.entries(p)) {
       if (skip.includes(key) || value === null || value === undefined) continue;
       
@@ -139,104 +156,102 @@ function injectProxies(template, proxies) {
     }
   }
 
-  // 正则替换：从 proxies: 开始，一直替换到 proxy-groups: 之前
-  const regex = /proxies:[\s\S]*?(?=proxy-groups:)/;
-  if (regex.test(template)) {
-    return template.replace(regex, proxyYaml + "\n");
+  // 2. 替换原模板中的 proxies 块
+  let finalYaml = template;
+  const proxyRegex = /proxies:[\s\S]*?(?=proxy-groups:)/;
+  if (proxyRegex.test(finalYaml)) {
+    finalYaml = finalYaml.replace(proxyRegex, proxyYaml + "\n");
   } else {
-    // 容错：如果模板里没有 proxy-groups:，就直接找 proxies: 替换
-    return template.replace("proxies:", proxyYaml);
+    finalYaml = finalYaml.replace("proxies:", proxyYaml);
   }
-}
 
-// -------------------- 以下为你原本的函数，完全保持不变 --------------------
+  // 3. 准备地区匹配数据
+  let regionMap = {};
+  for (const rule of REGION_RULES) {
+    for (const group of rule.groups) {
+      regionMap[group] = [];
+    }
+  }
 
-// 构建完整 Clash.Meta YAML (兜底使用)
-function buildFullClash(proxies) {
-  let yaml = `port: 7890
-socks-port: 7891
-mixed-port: 7892
-allow-lan: false
-mode: rule
-log-level: info
-ipv6: false
-unified-delay: true
-tcp-concurrent: true
-global-client-fingerprint: chrome
-
-dns:
-  enable: true
-  listen: ':53'
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-  fallback:
-    - https://1.1.1.1/dns-query
-
-proxies:
-`;
-
-  for (const p of proxies) {
-    yaml += `  - name: "${p.name}"\n`;
-    yaml += `    type: ${p.type}\n`;
-    yaml += `    server: ${p.server}\n`;
-    yaml += `    port: ${p.port}\n`;
-
-    const skip = ['name', 'type', 'server', 'port', '_country'];
-    
-    for (const [key, value] of Object.entries(p)) {
-      if (skip.includes(key) || value === null || value === undefined) continue;
-      
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        yaml += `    ${key}:\n`;
-        for (const [k2, v2] of Object.entries(value)) {
-          if (typeof v2 === 'object') { 
-            yaml += `      ${k2}:\n`;
-            for (const [k3, v3] of Object.entries(v2)) {
-              yaml += `        ${k3}: "${v3}"\n`;
-            }
-          } else {
-            yaml += `      ${k2}: ${typeof v2 === 'string' ? `"${v2}"` : v2}\n`;
-          }
-        }
-      } else if (Array.isArray(value)) {
-        yaml += `    ${key}: [${value.map(v => `"${v}"`).join(",")}]\n`;
-      } else {
-        yaml += `    ${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
+  for (const name of allNames) {
+    for (const rule of REGION_RULES) {
+      if (rule.keywords.some(kw => name.toLowerCase().includes(kw.toLowerCase()))) {
+        rule.groups.forEach(g => regionMap[g].push(name));
+        break; 
       }
     }
   }
 
-  const allProxyNames = proxies.map(p => p.name);
+  // 4. 逐行解析模板，执行“追加”逻辑
+  let lines = finalYaml.split('\n');
+  let newLines = [];
+  let inProxyGroups = false;
+  let currentGroupName = "";
+  let groupProxiesBuffer = []; // 用于临时存放检测到的策略组内容
 
-  yaml += "\nproxy-groups:\n";
-  yaml += buildGroup("🚀 节点选择", "select", ["♻️ 自动选择", ...allProxyNames]);
-  yaml += buildGroup("♻️ 自动选择", "url-test", allProxyNames);
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    
+    // 检查是否进入/退出 proxy-groups
+    if (line.trim() === "proxy-groups:") {
+      inProxyGroups = true;
+      newLines.push(line);
+      continue;
+    }
+    if (inProxyGroups && /^[a-zA-Z]/.test(line.trim()) && !line.startsWith(" ") && line.trim() !== "proxy-groups:") {
+      inProxyGroups = false;
+    }
 
-  yaml += `
-rules:
-  - DOMAIN-SUFFIX,local,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - GEOIP,CN,DIRECT
-  - MATCH,🚀 节点选择
-`;
+    if (!inProxyGroups) {
+      newLines.push(line);
+      continue;
+    }
 
-  return yaml;
+    // 提取组名
+    let nameMatch = line.match(/^\s*-\s*name:\s*(['"]?)(.+?)\1\s*$/);
+    if (nameMatch) {
+      currentGroupName = nameMatch[2];
+      newLines.push(line);
+      continue;
+    }
+
+    // 核心逻辑：碰到下一个策略组的开始 (-) 或者块结束，才把 buffer 里的节点插进去
+    // 但为了简单稳定，我们直接定位到当前组的 proxies: 块并寻找它的结束位置
+    newLines.push(line);
+
+    // 如果当前行是 "proxies:"，我们向后扫描，直到找到下一个不再缩进的行
+    if (line.match(/^\s*proxies:\s*$/)) {
+      let indentMatch = line.match(/^(\s*)proxies:/);
+      let baseIndent = indentMatch[1];
+      let itemIndent = baseIndent + "  ";
+
+      // 继续读取后续行，直到遇到不属于当前 proxies 列表的内容
+      let j = i + 1;
+      while (j < lines.length) {
+        let nextLine = lines[j];
+        // 如果下一行是空行，或者是更浅缩进的行，或者是新的 group (-)
+        if (nextLine.trim() !== "" && !nextLine.startsWith(itemIndent)) {
+          break;
+        }
+        newLines.push(nextLine);
+        j++;
+      }
+      
+      // 在这里插入新节点（此时已达到原列表末尾）
+      if (ALL_PROXIES_GROUPS.includes(currentGroupName)) {
+        allNames.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+      } else if (regionMap[currentGroupName]) {
+        regionMap[currentGroupName].forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+      }
+
+      i = j - 1; // 跳过已处理的行
+    }
+  }
+
+  return newLines.join('\n');
 }
 
-function buildGroup(name, type, proxyList) {
-  let str = `  - name: "${name}"\n    type: ${type}\n`;
-  if (type === "url-test") {
-    str += `    url: http://www.gstatic.com/generate_204\n    interval: 300\n`;
-  }
-  str += `    proxies:\n`;
-  for (const p of proxyList) {
-    str += `      - "${p}"\n`;
-  }
-  return str;
-}
+// -------------------- 协议解析区 (保持不变) --------------------
 
 function parseVless(line) {
   try {
