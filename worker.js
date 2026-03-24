@@ -10,7 +10,7 @@ const DEFAULT_TEMPLATE_URL = "https://raw.githubusercontent.com/你的用户名/
 // ================= 2. 策略组分类配置区 =================
 // 填入需要包含【所有节点】的策略组名称
 const ALL_PROXIES_GROUPS = [
-  "🌎社媒", 
+  "✅节点选择", 
   "🕸GPT", 
   "🎧Spotify", 
   "🚀最低延迟", 

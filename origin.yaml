@@ -100,23 +100,6 @@ proxy-groups:
       - ♻️自动切换
       - ⚖️负载均衡
       - DIRECT
-  - name: 🌎社媒
-    type: select
-    proxies:
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
-      - 🚀最低延迟
-      - ♻️自动切换
-      - ⚖️负载均衡
-      - DIRECT   
   - name: 🕸GPT
     type: select
     proxies:
@@ -398,31 +381,31 @@ rules:
  - DOMAIN-KEYWORD,dmmiku,✅节点选择
  - DOMAIN-KEYWORD,5dm,✅节点选择
  - DOMAIN-KEYWORD,agedm,✅节点选择
- - DOMAIN-KEYWORD,tiktok,🌎社媒
- - DOMAIN-SUFFIX,tiktok.com,🌎社媒
- - DOMAIN-KEYWORD,facebook,🌎社媒
- - DOMAIN-SUFFIX,thefacebook.com,🌎社媒
- - DOMAIN-SUFFIX,facebook.com,🌎社媒
- - DOMAIN-SUFFIX,fb.com,🌎社媒
- - DOMAIN-SUFFIX,fb.me,🌎社媒
- - DOMAIN-SUFFIX,fbcdn.com,🌎社媒
- - DOMAIN-SUFFIX,fbcdn.net,🌎社媒
- - DOMAIN-KEYWORD,fbcdn,🌎社媒
- - DOMAIN-KEYWORD,instagram,🌎社媒
- - DOMAIN-SUFFIX,cdninstagram.com,🌎社媒
- - DOMAIN-SUFFIX,instagram.com,🌎社媒
- - DOMAIN-SUFFIX,x.com,🌎社媒
- - DOMAIN-SUFFIX,instagr.am,🌎社媒
- - DOMAIN-SUFFIX,twimg.co,🌎社媒
- - DOMAIN-SUFFIX,twimg.com,🌎社媒
- - DOMAIN-SUFFIX,twimg.org,🌎社媒
- - DOMAIN-SUFFIX,pinterest.com,🌎社媒
- - DOMAIN-SUFFIX,messenger.com,🌎社媒
- - DOMAIN-KEYWORD,whatsapp,🌎社媒
- - DOMAIN-KEYWORD,telegram,🌎社媒
- - DOMAIN-KEYWORD,twitter,🌎社媒
- - DOMAIN-SUFFIX,telegram.me,🌎社媒
- - DOMAIN-SUFFIX,telegram.org,🌎社媒
+ - DOMAIN-KEYWORD,tiktok,✅节点选择
+ - DOMAIN-SUFFIX,tiktok.com,✅节点选择
+ - DOMAIN-KEYWORD,facebook,✅节点选择
+ - DOMAIN-SUFFIX,thefacebook.com,✅节点选择
+ - DOMAIN-SUFFIX,facebook.com,✅节点选择
+ - DOMAIN-SUFFIX,fb.com,✅节点选择
+ - DOMAIN-SUFFIX,fb.me,✅节点选择
+ - DOMAIN-SUFFIX,fbcdn.com,✅节点选择
+ - DOMAIN-SUFFIX,fbcdn.net,✅节点选择
+ - DOMAIN-KEYWORD,fbcdn,✅节点选择
+ - DOMAIN-KEYWORD,instagram,✅节点选择
+ - DOMAIN-SUFFIX,cdninstagram.com,✅节点选择
+ - DOMAIN-SUFFIX,instagram.com,✅节点选择
+ - DOMAIN-SUFFIX,x.com,✅节点选择
+ - DOMAIN-SUFFIX,instagr.am,✅节点选择
+ - DOMAIN-SUFFIX,twimg.co,✅节点选择
+ - DOMAIN-SUFFIX,twimg.com,✅节点选择
+ - DOMAIN-SUFFIX,twimg.org,✅节点选择
+ - DOMAIN-SUFFIX,pinterest.com,✅节点选择
+ - DOMAIN-SUFFIX,messenger.com,✅节点选择
+ - DOMAIN-KEYWORD,whatsapp,✅节点选择
+ - DOMAIN-KEYWORD,telegram,✅节点选择
+ - DOMAIN-KEYWORD,twitter,✅节点选择
+ - DOMAIN-SUFFIX,telegram.me,✅节点选择
+ - DOMAIN-SUFFIX,telegram.org,✅节点选择
  - DOMAIN-SUFFIX,discord.com,✅节点选择
  - DOMAIN-SUFFIX,discordapp.com,✅节点选择
  - DOMAIN-SUFFIX,discord.gg,✅节点选择
