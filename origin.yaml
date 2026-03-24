@@ -120,45 +120,7 @@ proxy-groups:
       - 🚀最低延迟
       - ♻️自动切换
       - ⚖️负载均衡
-      - DIRECT
-  - name: 📻Discord
-    type: select
-    proxies:
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换 
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
-      - 🚀🇨🇦CA最低延迟
-      - ♻️🇨🇦CA自动切换
-      - ⚖️负载均衡
-      - 🚀最低延迟
-      - ♻️自动切换
-      - DIRECT    
-  - name: 🎮游戏
-    type: select
-    proxies:
-      - 🚀最低延迟
-      - ♻️自动切换
-      - ⚖️负载均衡
-      - DIRECT
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
-      - 🚀🇨🇦CA最低延迟
-      - ♻️🇨🇦CA自动切换
+      - DIRECT   
   - name: 🕸GPT
     type: select
     proxies:
@@ -191,25 +153,6 @@ proxy-groups:
       - ♻️🇺🇸US自动切换
       - 🚀🇨🇦CA最低延迟
       - ♻️🇨🇦CA自动切换
-  - name: 🎥影视
-    type: select
-    proxies:
-      - 🚀最低延迟
-      - ♻️自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
-      - 🚀🇨🇦CA最低延迟
-      - ♻️🇨🇦CA自动切换
-      - ⚖️负载均衡
-      - DIRECT
   - name: Ⓜ️微软服务
     type: select
     proxies:
@@ -384,103 +327,103 @@ rules:
  - DOMAIN-SUFFIX,e.wxriw.cn,🎧Spotify
  - DOMAIN-KEYWORD,spotify,🎧Spotify
  - DOMAIN-KEYWORD,lyricify,🎧Spotify
- - DOMAIN-SUFFIX,pubg1.battleye.com,🎮游戏
- - DOMAIN-SUFFIX,akamaihd.net,🎮游戏
- - DOMAIN-SUFFIX,akamai.net,🎮游戏
- - DOMAIN,steamcdn-a.akamaihd.net,🎮游戏
- - DOMAIN-SUFFIX,steamcontent.com,🎮游戏
- - DOMAIN-SUFFIX,steamcommunity.com,🎮游戏
- - DOMAIN,prod-live-cfentry.playbattlegrounds.com,🎮游戏
- - DOMAIN,prod-broker.pubgha.com,🎮游戏
- - DOMAIN,zk-pcprod.pubgbluehole.com,🎮游戏
- - DOMAIN-SUFFIX,pubg.com,🎮游戏
- - DOMAIN-SUFFIX,playbattlegrounds.com,🎮游戏
- - DOMAIN-SUFFIX,pubgha.com,🎮游戏
- - DOMAIN-SUFFIX,pubgbluehole.com,🎮游戏
- - DOMAIN-SUFFIX,battlegrounds.pubg.com,🎮游戏
- - DOMAIN-SUFFIX,patch.battlegrounds.pubg.com,🎮游戏
- - DOMAIN-SUFFIX,live.battlegrounds.pubg.com,🎮游戏
- - DOMAIN-SUFFIX,online-battlegrounds.pubg.com,🎮游戏
- - DOMAIN-SUFFIX,prod-live.pugcapi.com,🎮游戏
- - DOMAIN-SUFFIX,cdn.gametools.network,🎮游戏
- - DOMAIN-SUFFIX,gs-public-s.akamaized.net,🎮游戏
- - PROCESS-NAME,TslGame.exe,🎮游戏
- - PROCESS-NAME,TslGame_BE.exe,🎮游戏
- - DOMAIN-SUFFIX,steam-chat.com,🎮游戏
- - DOMAIN-SUFFIX,steamgames.com,🎮游戏
- - DOMAIN-SUFFIX,steampowered.com,🎮游戏
- - DOMAIN-SUFFIX,steamstatic.com,🎮游戏
- - DOMAIN-SUFFIX,steamstat.us,🎮游戏
- - DOMAIN-SUFFIX,epicgames.com,🎮游戏
- - DOMAIN-SUFFIX,epicgames-download1.akamaized.net,🎮游戏
- - DOMAIN-KEYWORD,epicgames-download,🎮游戏
- - DOMAIN-KEYWORD,epicgames,🎮游戏
- - DOMAIN,steambroadcast.akamaized.net,🎮游戏
- - DOMAIN,steamcommunity-a.akamaihd.net,🎮游戏
- - DOMAIN,steamstore-a.akamaihd.net,🎮游戏
- - DOMAIN,steamusercontent-a.akamaihd.net,🎮游戏
- - DOMAIN,steamuserimages-a.akamaihd.net,🎮游戏
- - DOMAIN,steampipe.akamaized.net,🎮游戏
+ - DOMAIN-SUFFIX,pubg1.battleye.com,✅节点选择
+ - DOMAIN-SUFFIX,akamaihd.net,✅节点选择
+ - DOMAIN-SUFFIX,akamai.net,✅节点选择
+ - DOMAIN,steamcdn-a.akamaihd.net,✅节点选择
+ - DOMAIN-SUFFIX,steamcontent.com,✅节点选择
+ - DOMAIN-SUFFIX,steamcommunity.com,✅节点选择
+ - DOMAIN,prod-live-cfentry.playbattlegrounds.com,✅节点选择
+ - DOMAIN,prod-broker.pubgha.com,✅节点选择
+ - DOMAIN,zk-pcprod.pubgbluehole.com,✅节点选择
+ - DOMAIN-SUFFIX,pubg.com,✅节点选择
+ - DOMAIN-SUFFIX,playbattlegrounds.com,✅节点选择
+ - DOMAIN-SUFFIX,pubgha.com,✅节点选择
+ - DOMAIN-SUFFIX,pubgbluehole.com,✅节点选择
+ - DOMAIN-SUFFIX,battlegrounds.pubg.com,✅节点选择
+ - DOMAIN-SUFFIX,patch.battlegrounds.pubg.com,✅节点选择
+ - DOMAIN-SUFFIX,live.battlegrounds.pubg.com,✅节点选择
+ - DOMAIN-SUFFIX,online-battlegrounds.pubg.com,✅节点选择
+ - DOMAIN-SUFFIX,prod-live.pugcapi.com,✅节点选择
+ - DOMAIN-SUFFIX,cdn.gametools.network,✅节点选择
+ - DOMAIN-SUFFIX,gs-public-s.akamaized.net,✅节点选择
+ - PROCESS-NAME,TslGame.exe,✅节点选择
+ - PROCESS-NAME,TslGame_BE.exe,✅节点选择
+ - DOMAIN-SUFFIX,steam-chat.com,✅节点选择
+ - DOMAIN-SUFFIX,steamgames.com,✅节点选择
+ - DOMAIN-SUFFIX,steampowered.com,✅节点选择
+ - DOMAIN-SUFFIX,steamstatic.com,✅节点选择
+ - DOMAIN-SUFFIX,steamstat.us,✅节点选择
+ - DOMAIN-SUFFIX,epicgames.com,✅节点选择
+ - DOMAIN-SUFFIX,epicgames-download1.akamaized.net,✅节点选择
+ - DOMAIN-KEYWORD,epicgames-download,✅节点选择
+ - DOMAIN-KEYWORD,epicgames,✅节点选择
+ - DOMAIN,steambroadcast.akamaized.net,✅节点选择
+ - DOMAIN,steamcommunity-a.akamaihd.net,✅节点选择
+ - DOMAIN,steamstore-a.akamaihd.net,✅节点选择
+ - DOMAIN,steamusercontent-a.akamaihd.net,✅节点选择
+ - DOMAIN,steamuserimages-a.akamaihd.net,✅节点选择
+ - DOMAIN,steampipe.akamaized.net,✅节点选择
  - DOMAIN-SUFFIX,livelog.nexon.com,🔗直连
- - DOMAIN-SUFFIX,nxl.nxfs.nexon.com,🎮游戏
- - DOMAIN-SUFFIX,nxl.log.nexon.io,🎮游戏
- - IP-CIDR,13.228.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,46.51.216.0/21,🎮游戏,no-resolve
- - IP-CIDR,46.137.0.0/17,🎮游戏,no-resolve
- - IP-CIDR,52.74.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,52.76.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,52.77.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,52.221.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.151.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.169.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.179.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.251.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.254.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.255.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,122.248.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,175.41.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,3.5.140.0/22,🎮游戏,no-resolve
- - IP-CIDR,13.56.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,35.153.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,52.4.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,52.22.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,52.54.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,54.84.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,54.88.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,54.172.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,54.175.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,54.239.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,174.129.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,184.73.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,184.72.0.0/17,🎮游戏,no-resolve
- - IP-CIDR,184.72.128.0/17,🎮游戏,no-resolve
- - IP-CIDR,184.72.64.0/18,🎮游戏,no-resolve
- - IP-CIDR,50.16.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,50.19.0.0/16,🎮游戏,no-resolve
- - IP-CIDR,107.20.0.0/15,🎮游戏,no-resolve
- - IP-CIDR,107.22.0.0/16,🎮游戏,no-resolve
- - DOMAIN-SUFFIX,mahjongg.yam.com,🎮游戏
- - DOMAIN-SUFFIX,3g2u.com,🎮游戏
- - DOMAIN-KEYWORD,gametower.com,🎮游戏
- - DOMAIN-KEYWORD,gametower.com.tw,🎮游戏
- - DOMAIN-SUFFIX,gametower.com,🎮游戏
- - DOMAIN-SUFFIX,gametower.com.tw,🎮游戏
- - DOMAIN-SUFFIX,yfsp.tv,🎥影视
- - DOMAIN-SUFFIX,viki.io,🎥影视
- - DOMAIN-SUFFIX,viki.com,🎥影视
- - DOMAIN-SUFFIX,ziziys.net,🎥影视
- - DOMAIN-SUFFIX,dmmiku.net,🎥影视
- - DOMAIN-SUFFIX,5dm.link,🎥影视
- - DOMAIN-SUFFIX,dmla5.com,🎥影视
- - DOMAIN-SUFFIX,295k.cc,🎥影视
- - DOMAIN-SUFFIX,agedm.io,🎥影视
- - DOMAIN-KEYWORD,295k,🎥影视
- - DOMAIN-KEYWORD,yfsp,🎥影视
- - DOMAIN-KEYWORD,viki,🎥影视
- - DOMAIN-KEYWORD,dmla5,🎥影视
- - DOMAIN-KEYWORD,dmmiku,🎥影视
- - DOMAIN-KEYWORD,5dm,🎥影视
- - DOMAIN-KEYWORD,agedm,🎥影视
+ - DOMAIN-SUFFIX,nxl.nxfs.nexon.com,✅节点选择
+ - DOMAIN-SUFFIX,nxl.log.nexon.io,✅节点选择
+ - IP-CIDR,13.228.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,46.51.216.0/21,✅节点选择,no-resolve
+ - IP-CIDR,46.137.0.0/17,✅节点选择,no-resolve
+ - IP-CIDR,52.74.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,52.76.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,52.77.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,52.221.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.151.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.169.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.179.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.251.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.254.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.255.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,122.248.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,175.41.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,3.5.140.0/22,✅节点选择,no-resolve
+ - IP-CIDR,13.56.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,35.153.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,52.4.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,52.22.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,52.54.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,54.84.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,54.88.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,54.172.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,54.175.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,54.239.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,174.129.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,184.73.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,184.72.0.0/17,✅节点选择,no-resolve
+ - IP-CIDR,184.72.128.0/17,✅节点选择,no-resolve
+ - IP-CIDR,184.72.64.0/18,✅节点选择,no-resolve
+ - IP-CIDR,50.16.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,50.19.0.0/16,✅节点选择,no-resolve
+ - IP-CIDR,107.20.0.0/15,✅节点选择,no-resolve
+ - IP-CIDR,107.22.0.0/16,✅节点选择,no-resolve
+ - DOMAIN-SUFFIX,mahjongg.yam.com,✅节点选择
+ - DOMAIN-SUFFIX,3g2u.com,✅节点选择
+ - DOMAIN-KEYWORD,gametower.com,✅节点选择
+ - DOMAIN-KEYWORD,gametower.com.tw,✅节点选择
+ - DOMAIN-SUFFIX,gametower.com,✅节点选择
+ - DOMAIN-SUFFIX,gametower.com.tw,✅节点选择
+ - DOMAIN-SUFFIX,yfsp.tv,✅节点选择
+ - DOMAIN-SUFFIX,viki.io,✅节点选择
+ - DOMAIN-SUFFIX,viki.com,✅节点选择
+ - DOMAIN-SUFFIX,ziziys.net,✅节点选择
+ - DOMAIN-SUFFIX,dmmiku.net,✅节点选择
+ - DOMAIN-SUFFIX,5dm.link,✅节点选择
+ - DOMAIN-SUFFIX,dmla5.com,✅节点选择
+ - DOMAIN-SUFFIX,295k.cc,✅节点选择
+ - DOMAIN-SUFFIX,agedm.io,✅节点选择
+ - DOMAIN-KEYWORD,295k,✅节点选择
+ - DOMAIN-KEYWORD,yfsp,✅节点选择
+ - DOMAIN-KEYWORD,viki,✅节点选择
+ - DOMAIN-KEYWORD,dmla5,✅节点选择
+ - DOMAIN-KEYWORD,dmmiku,✅节点选择
+ - DOMAIN-KEYWORD,5dm,✅节点选择
+ - DOMAIN-KEYWORD,agedm,✅节点选择
  - DOMAIN-KEYWORD,tiktok,🌎社媒
  - DOMAIN-SUFFIX,tiktok.com,🌎社媒
  - DOMAIN-KEYWORD,facebook,🌎社媒
@@ -506,21 +449,21 @@ rules:
  - DOMAIN-KEYWORD,twitter,🌎社媒
  - DOMAIN-SUFFIX,telegram.me,🌎社媒
  - DOMAIN-SUFFIX,telegram.org,🌎社媒
- - DOMAIN-SUFFIX,discord.com,📻Discord
- - DOMAIN-SUFFIX,discordapp.com,📻Discord
- - DOMAIN-SUFFIX,discord.gg,📻Discord
- - DOMAIN-SUFFIX,discordapp.net,📻Discord
- - DOMAIN-SUFFIX,discordmedia.io,📻Discord
- - DOMAIN-SUFFIX,discordapp.io,📻Discord
- - DOMAIN-SUFFIX,discordstatus.com,📻Discord
- - DOMAIN-SUFFIX,discord.com.edgesuite.net,📻Discord
- - DOMAIN-SUFFIX,discord.com.cdn.cloudflare.net,📻Discord
- - DOMAIN-SUFFIX,discord.com.cloudflare.net,📻Discord
- - IP-CIDR,66.22.192.0/18,📻Discord
- - IP-CIDR,162.159.128.0/17,📻Discord
- - IP-CIDR,185.50.107.0/24,📻Discord
- - IP-CIDR,188.122.83.0/24,📻Discord
- - IP-CIDR,43.239.137.0/24,📻Discord
+ - DOMAIN-SUFFIX,discord.com,✅节点选择
+ - DOMAIN-SUFFIX,discordapp.com,✅节点选择
+ - DOMAIN-SUFFIX,discord.gg,✅节点选择
+ - DOMAIN-SUFFIX,discordapp.net,✅节点选择
+ - DOMAIN-SUFFIX,discordmedia.io,✅节点选择
+ - DOMAIN-SUFFIX,discordapp.io,✅节点选择
+ - DOMAIN-SUFFIX,discordstatus.com,✅节点选择
+ - DOMAIN-SUFFIX,discord.com.edgesuite.net,✅节点选择
+ - DOMAIN-SUFFIX,discord.com.cdn.cloudflare.net,✅节点选择
+ - DOMAIN-SUFFIX,discord.com.cloudflare.net,✅节点选择
+ - IP-CIDR,66.22.192.0/18,✅节点选择
+ - IP-CIDR,162.159.128.0/17,✅节点选择
+ - IP-CIDR,185.50.107.0/24,✅节点选择
+ - IP-CIDR,188.122.83.0/24,✅节点选择
+ - IP-CIDR,43.239.137.0/24,✅节点选择
  - DOMAIN,apple.com,🍎苹果
  - DOMAIN,gspe1-ssl.ls.apple.com,🍎苹果
  - DOMAIN,iosapps.itunes.apple.com,🍎苹果
