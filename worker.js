@@ -1,7 +1,6 @@
 /**
  * 完整可替换 Worker 版本
  * 支持 Clash.Meta 全配置 + tuic/hysteria2/vmess/vless/ss
- * 防封架构，自动分组
  */
 
 export default {
