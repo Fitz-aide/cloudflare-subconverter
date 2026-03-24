@@ -4,177 +4,126 @@
  */
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const reqUrl = new URL(request.url);
+    const subUrl = reqUrl.searchParams.get("url");
     
-    // 修复：暴力提取 url= 后面的所有内容，防止带有 & 的参数被错误截断
-    let subUrl = "";
-    const urlMatch = reqUrl.search.match(/url=(.*)/);
-    if (urlMatch) {
-      subUrl = urlMatch[1];
-    } else {
-      return new Response("Missing url", { status: 400 });
+    if (!subUrl) return new Response("Missing url (请在 URL 后添加 ?url=订阅地址)", { status: 400 });
+
+    // 1. 获取 GitHub 模板 URL (优先从环境变量读取)
+    const githubRawUrl = env.origin || "https://raw.githubusercontent.com/xxxx/cloudflare-subconverter/refs/heads/main/origin.yaml";
+    
+    let template = "";
+    try {
+      // 添加较短的超时处理，防止 GitHub 响应过慢导致整个请求挂掉
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+      
+      const tResp = await fetch(githubRawUrl, { signal: controller.signal });
+      if (!tResp.ok) throw new Error(`Status: ${tResp.status}`);
+      template = await tResp.text();
+      clearTimeout(timeoutId);
+    } catch (e) {
+      return new Response(`无法读取 GitHub 模板: ${e.message}`, { status: 500 });
     }
 
-    const name = reqUrl.searchParams.get("name") || "SUB";
-
-    if (!subUrl) {
-      return new Response("Missing url", { status: 400 });
-    }
-
-    // 支持多订阅地址，用 | 分隔
+    // 2. 抓取并解析节点 (复用你之前的逻辑)
     const urls = subUrl.split("|");
-    let allLines = [];
-
-    for (const u of urls) {
-      let text = "";
-      try {
-        const resp = await fetch(u, {
-          headers: {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "*/*",
-            "Referer": u
-          }
-        });
-        text = await resp.text();
-      } catch (e) {
-        console.log(`Fetch failed: ${u} ${e}`);
-      }
-
-      if (!text) continue;
-
-      // 尝试 Base64 解码
-      try {
-        text = atob(text.trim());
-      } catch {}
-      allLines.push(...text.split("\n"));
-    }
-
     let proxies = [];
-    let nameCounter = {};
-
-    for (let line of allLines) {
-      line = line.trim();
-      if (!line) continue;
-
-      let proxy = null;
-
-      if (line.startsWith("vmess://")) proxy = parseVmess(line);
-      else if (line.startsWith("vless://")) proxy = parseVless(line);
-      else if (line.startsWith("ss://")) proxy = parseSS(line);
-      else if (line.startsWith("hysteria2://")) proxy = parseHy2(line);
-      else if (line.startsWith("tuic://")) proxy = parseTuic(line);
-
-      if (!proxy) continue;
-	  
-      proxies.push(proxy);
+    for (const u of urls) {
+      try {
+        const resp = await fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } });
+        let text = await resp.text();
+        try { text = safeBase64Decode(text.trim()); } catch {}
+        
+        for (let line of text.split("\n")) {
+          let p = null;
+          if (line.startsWith("ss://")) p = parseSS(line);
+          else if (line.startsWith("vless://")) p = parseVless(line);
+          else if (line.startsWith("vmess://")) p = parseVmess(line);
+          else if (line.startsWith("hysteria2://")) p = parseHy2(line);
+          else if (line.startsWith("tuic://")) p = parseTuic(line);
+          if (p) proxies.push(p);
+        }
+      } catch (e) {}
     }
 
-    return new Response(buildFullClash(proxies), {
+    // 3. 动态处理：按国家分类（用于填充你的模板分组）
+    const groups = { HK: [], JP: [], US: [], SG: [], TW: [], CA: [] };
+    proxies.forEach(p => {
+      const name = p.name.toUpperCase();
+      if (name.includes("HK") || name.includes("香港")) groups.HK.push(p.name);
+      else if (name.includes("JP") || name.includes("日本")) groups.JP.push(p.name);
+      else if (name.includes("US") || name.includes("美国")) groups.US.push(p.name);
+      else if (name.includes("SG") || name.includes("新加坡")) groups.SG.push(p.name);
+      else if (name.includes("TW") || name.includes("台湾")) groups.TW.push(p.name);
+      else if (name.includes("CA") || name.includes("加拿大")) groups.CA.push(p.name);
+    });
+
+    // 4. 组装最终 YAML
+    let finalYaml = injectProxies(template, proxies, groups);
+
+    return new Response(finalYaml, {
       headers: { "Content-Type": "text/yaml; charset=utf-8" }
     });
   }
 };
 
+// 注入函数：找到模板中的关键位置并替换
+function injectProxies(template, proxies, groups) {
+  let lines = template.split('\n');
+  let result = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    result.push(line);
 
-// 构建完整 Clash.Meta YAML
-// 构建完整 Clash.Meta YAML
-function buildFullClash(proxies) {
-  // 基础配置头部
-  let yaml = `port: 7890
-socks-port: 7891
-mixed-port: 7892
-allow-lan: false
-mode: rule
-log-level: info
-ipv6: false
-unified-delay: true
-tcp-concurrent: true
-global-client-fingerprint: chrome
+    // 在 proxies: 标签下插入所有节点
+    if (line.trim() === 'proxies:') {
+      proxies.forEach(p => {
+        result.push(generateProxyItem(p));
+      });
+      // 跳过模板中原本自带的 example 节点（如果有的话）
+      while(i + 1 < lines.length && (lines[i+1].startsWith('  -') || lines[i+1].trim() === '')) i++;
+    }
 
-dns:
-  enable: true
-  listen: ':53'
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-  fallback:
-    - https://1.1.1.1/dns-query
-
-proxies:
-`;
-
-  // 1. 动态生成 Proxy 节点
-  for (const p of proxies) {
-    yaml += `  - name: "${p.name}"\n`;
-    yaml += `    type: ${p.type}\n`;
-    yaml += `    server: ${p.server}\n`;
-    yaml += `    port: ${p.port}\n`;
-
-    // 定义需要跳过处理的基础字段
-    const skip = ['name', 'type', 'server', 'port', '_country'];
-    
-    for (const [key, value] of Object.entries(p)) {
-      if (skip.includes(key) || value === null || value === undefined) continue;
-      
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        // 处理一级对象 (如 ws-opts, reality-opts)
-        yaml += `    ${key}:\n`;
-        for (const [k2, v2] of Object.entries(value)) {
-          if (typeof v2 === 'object') { 
-            // 处理二级对象 (如 headers)
-            yaml += `      ${k2}:\n`;
-            for (const [k3, v3] of Object.entries(v2)) {
-              yaml += `        ${k3}: "${v3}"\n`;
-            }
-          } else {
-            yaml += `      ${k2}: ${typeof v2 === 'string' ? `"${v2}"` : v2}\n`;
-          }
+    // 自动填充国家分组
+    if (line.includes('proxies:') && i > 0) {
+      const prevLine = lines[i-1];
+      // 匹配模板中的分组名，如 "name: 🚀🇯🇵JP最低延迟"
+      if (prevLine.includes('JP')) fillGroup(result, groups.JP);
+      else if (prevLine.includes('HK')) fillGroup(result, groups.HK);
+      else if (prevLine.includes('US')) fillGroup(result, groups.US);
+      else if (prevLine.includes('SG')) fillGroup(result, groups.SG);
+      else if (prevLine.includes('TW')) fillGroup(result, groups.TW);
+      else if (prevLine.includes('CA')) fillGroup(result, groups.CA);
+      else if (prevLine.includes('自动选择') || prevLine.includes('最低延迟') || prevLine.includes('负载均衡')) {
+        if (!prevLine.includes('JP') && !prevLine.includes('HK')) { // 全局组
+            fillGroup(result, proxies.map(p => p.name));
         }
-      } else if (Array.isArray(value)) {
-        // 处理数组 (如 alpn)
-        yaml += `    ${key}: [${value.map(v => `"${v}"`).join(",")}]\n`;
-      } else {
-        // 处理普通字段
-        yaml += `    ${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
       }
     }
   }
-
-  // 获取所有节点名称用于策略组
-  const allProxyNames = proxies.map(p => p.name);
-
-  // 2. 生成策略组
-  yaml += "\nproxy-groups:\n";
-  // 默认主选择组
-  yaml += buildGroup("🚀 节点选择", "select", ["♻️ 自动选择", ...allProxyNames]);
-  // 自动延迟测试组
-  yaml += buildGroup("♻️ 自动选择", "url-test", allProxyNames);
-
-  // 3. 规则部分
-  yaml += `
-rules:
-  - DOMAIN-SUFFIX,local,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - GEOIP,CN,DIRECT
-  - MATCH,🚀 节点选择
-`;
-
-  return yaml;
+  return result.join('\n');
 }
 
-// 构建组辅助函数
-function buildGroup(name, type, proxyList) {
-  let str = `  - name: "${name}"\n    type: ${type}\n`;
-  if (type === "url-test") {
-    str += `    url: http://www.gstatic.com/generate_204\n    interval: 300\n`;
+function fillGroup(resultArr, nameList) {
+  if (nameList.length === 0) {
+    resultArr.push('      - DIRECT'); // 如果没节点，回退到直连
+  } else {
+    nameList.forEach(n => resultArr.push(`      - "${n}"`));
   }
-  str += `    proxies:\n`;
-  for (const p of proxyList) {
-    str += `      - "${p}"\n`;
+}
+
+function generateProxyItem(p) {
+  // 这里复用你之前的对象转 YAML 字符串逻辑，注意缩进是 2 个空格
+  let str = `  - { name: "${p.name}", type: ${p.type}, server: ${p.server}, port: ${p.port}`;
+  // 简化的 inline 格式，或者你可以用你之前的多行格式
+  for (let [k, v] of Object.entries(p)) {
+    if (['name', 'type', 'server', 'port'].includes(k)) continue;
+    str += `, ${k}: ${typeof v === 'string' ? `"${v}"` : JSON.stringify(v)}`;
   }
+  str += ` }`;
   return str;
 }
 
