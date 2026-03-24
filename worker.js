@@ -1,38 +1,37 @@
 export default {
   async fetch(request, env) {
     const reqUrl = new URL(request.url);
-    
-    // 1. 暴力提取 URL (兼容 &token= 截断问题)
     let subUrl = reqUrl.searchParams.get("url") || "";
-    if (!subUrl) return new Response("Missing url", { status: 400 });
+    if (!subUrl) return new Response("缺少订阅地址", { status: 400 });
+
+    // 处理被截断的 URL
     reqUrl.searchParams.forEach((value, key) => {
       if (key !== "url" && key !== "name") subUrl += `&${key}=${value}`;
     });
 
-    // 2. 获取 GitHub 模板 (origin.yaml)
+    // 1. 获取 origin.yaml 模板
     const githubRawUrl = env.origin;
     let template = "";
     try {
       const tResp = await fetch(githubRawUrl);
       template = await tResp.text();
     } catch (e) {
-      return new Response("无法读取模板，请检查环境变量 origin", { status: 500 });
+      return new Response("无法读取 origin.yaml，请检查环境变量", { status: 500 });
     }
 
-    // 3. 抓取并解析节点
+    // 2. 抓取并解析节点
     const urls = subUrl.split("|");
     let proxies = [];
     for (const u of urls) {
       try {
         const resp = await fetch(u.trim(), {
-          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+          headers: { "User-Agent": "ClashMeta" }
         });
         let text = await resp.text();
         text = text.trim().replace(/^\uFEFF/, '');
         let content = text.includes("://") ? text : safeBase64Decode(text);
 
-        const lines = content.split(/\r?\n/);
-        for (let line of lines) {
+        content.split(/\r?\n/).forEach(line => {
           let p = null;
           if (line.startsWith("ss://")) p = parseSS(line);
           else if (line.startsWith("vless://")) p = parseVless(line);
@@ -41,30 +40,31 @@ export default {
           else if (line.startsWith("tuic://")) p = parseTuic(line);
 
           if (p && p.server) {
-            p.name = (p.name || `${p.type}_${p.server}`).replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s_-]/g, '');
-            let baseName = p.name;
-            let counter = 1;
-            while (proxies.some(x => x.name === p.name)) p.name = `${baseName}_${counter++}`;
+            // 清理节点名中的非法字符，防止破坏 YAML 结构
+            p.name = p.name.replace(/[\[\]]/g, '').trim();
             proxies.push(p);
           }
-        }
+        });
       } catch (e) {}
     }
 
-    if (proxies.length === 0) return new Response("未能解析到节点", { status: 500 });
+    if (proxies.length === 0) return new Response("未解析到任何有效节点", { status: 500 });
 
-    // 4. 国家分类逻辑
+    // 3. 定义分类逻辑
+    const filter = (regex) => proxies.filter(p => regex.test(p.name)).map(p => p.name);
+    
     const groups = {
-      HK: proxies.filter(p => /HK|香港|HongKong/i.test(p.name)).map(p => p.name),
-      JP: proxies.filter(p => /JP|日本|Japan/i.test(p.name)).map(p => p.name),
-      US: proxies.filter(p => /US|美国|United States/i.test(p.name)).map(p => p.name),
-      SG: proxies.filter(p => /SG|新加坡|Singapore/i.test(p.name)).map(p => p.name),
-      TW: proxies.filter(p => /TW|台湾|Taiwan/i.test(p.name)).map(p => p.name),
+      HK: filter(/HK|香港|HongKong|🇭🇰/i),
+      JP: filter(/JP|日本|Japan|🇯🇵/i),
+      US: filter(/US|美国|States|🇺🇸/i),
+      SG: filter(/SG|新加坡|Singapore|🇸🇬/i),
+      TW: filter(/TW|台湾|Taiwan|🇹🇼/i),
+      CA: filter(/CA|加拿大|Canada|🇨🇦/i),
       ALL: proxies.map(p => p.name)
     };
 
-    // 5. 【智能注入】核心逻辑
-    const finalYaml = smartInject(template, proxies, groups);
+    // 4. 执行智能注入
+    const finalYaml = injectToTemplate(template, proxies, groups);
 
     return new Response(finalYaml, {
       headers: { "Content-Type": "text/yaml; charset=utf-8" }
@@ -73,93 +73,90 @@ export default {
 };
 
 /**
- * 智能注入函数：处理 proxies 和 proxy-groups
+ * 注入函数：精准识别底层组并填充
  */
-function smartInject(template, proxies, groups) {
+function injectToTemplate(template, proxies, groups) {
   let lines = template.split('\n');
-  let newLines = [];
-  let skipOldProxies = false;
+  let result = [];
+  let currentGroupName = "";
+  let isInsideProxiesBlock = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
     let trimmed = line.trim();
 
-    // A. 处理 proxies 模块
-    if (trimmed === 'proxies:') {
-      newLines.push(line);
-      // 将所有节点塞进去
+    // A. 替换全局 proxies 列表
+    if (trimmed === "proxies:" || trimmed === "proxies: # 这里的内容会被替换") {
+      result.push("proxies:");
       proxies.forEach(p => {
-        newLines.push(generateClashProxy(p));
+        result.push(generateProxyLine(p));
       });
-      skipOldProxies = true; // 标记开始跳过原有的 example 节点
+      // 跳过模板里原本自带的 example 节点
+      while (i + 1 < lines.length && (lines[i+1].trim().startsWith("-") || lines[i+1].trim() === "")) {
+        i++;
+      }
       continue;
     }
 
-    // 如果处于跳过状态，且遇到了下一个一级配置（如 proxy-groups:），停止跳过
-    if (skipOldProxies && line.length > 0 && !line.startsWith(' ') && !line.startsWith('-')) {
-      skipOldProxies = false;
+    // B. 处理策略组内部
+    if (trimmed.startsWith("- name:")) {
+      currentGroupName = trimmed.split(":")[1].trim().replace(/['"]/g, "");
     }
 
-    if (skipOldProxies) continue; // 跳过旧的示例节点行
+    result.push(line);
 
-    // B. 处理 proxy-groups 模块
-    newLines.push(line);
-
-    // 寻找包含 "proxies:" 的行，通常它在某个 Group 下面
-    if (trimmed === 'proxies:' && i > 0) {
-      // 向上查找最近的一个 - name: 来确定这是哪个组
-      let groupName = "";
-      for (let j = i - 1; j >= 0; j--) {
-        if (lines[j].includes('- name:')) {
-          groupName = lines[j].split('- name:')[1].trim().replace(/['"]/g, '');
-          break;
-        }
-      }
-
-      // 根据组名注入节点
-      let listToInject = [];
-      if (groupName.includes("香港") || groupName.includes("HK")) listToInject = groups.HK;
-      else if (groupName.includes("日本") || groupName.includes("JP")) listToInject = groups.JP;
-      else if (groupName.includes("美国") || groupName.includes("US")) listToInject = groups.US;
-      else if (groupName.includes("新加坡") || groupName.includes("SG")) listToInject = groups.SG;
-      else if (groupName.includes("台湾") || groupName.includes("TW")) listToInject = groups.TW;
-      else listToInject = groups.ALL; // 默认（如 ✅节点选择）注入所有节点
-
-      if (listToInject.length > 0) {
-        listToInject.forEach(n => newLines.push(`      - "${n}"`));
-      } else {
-        newLines.push(`      - DIRECT`);
-      }
+    // C. 寻找底层策略组的空 proxies 标记进行填充
+    if (trimmed === "proxies:" && i > 0) {
+      // 只有当这一组的下面没有定义任何节点时，我们才填充
+      const nextLine = (i + 1 < lines.length) ? lines[i+1].trim() : "";
       
-      // 跳过模板中原本可能存在的示例节点行（直到遇到下一个 - name 或新块）
-      while (i + 1 < lines.length && (lines[i+1].trim().startsWith('-') || lines[i+1].trim() === '')) {
-        i++;
+      // 判断该组名属于哪个分类，填充对应节点
+      let listToFill = [];
+      if (currentGroupName.includes("HK")) listToFill = groups.HK;
+      else if (currentGroupName.includes("JP")) listToFill = groups.JP;
+      else if (currentGroupName.includes("US")) listToFill = groups.US;
+      else if (currentGroupName.includes("SG")) listToFill = groups.SG;
+      else if (currentGroupName.includes("TW")) listToFill = groups.TW;
+      else if (currentGroupName.includes("CA")) listToFill = groups.CA;
+      else if (currentGroupName.includes("自动切换") || currentGroupName.includes("最低延迟") || currentGroupName.includes("负载均衡")) {
+        listToFill = groups.ALL;
+      }
+
+      // 如果找到了对应的节点列表，且当前处于模板中该组的 proxies: 位置
+      // 注意：如果模板里已经手动写了节点（如 ✅节点选择 里的那些），nextLine 就不为空，我们跳过填充
+      if (listToFill.length > 0 && nextLine === "") {
+        listToFill.forEach(name => {
+          result.push(`      - "${name}"`);
+        });
       }
     }
   }
-  return newLines.join('\n');
+  return result.join('\n');
 }
 
-function generateClashProxy(p) {
-  let entries = Object.entries(p).map(([k, v]) => {
-    if (k === 'name') return `name: "${v}"`;
-    if (typeof v === 'string') return `${k}: ${v}`;
-    return `${k}: ${JSON.stringify(v)}`;
-  });
-  return `  - { ${entries.join(', ')} }`;
+function generateProxyLine(p) {
+  let fields = [`name: "${p.name}"`, `type: ${p.type}`, `server: ${p.server}`, `port: ${p.port}`];
+  if (p.uuid) fields.push(`uuid: ${p.uuid}`);
+  if (p.cipher) fields.push(`cipher: ${p.cipher}`);
+  if (p.password) fields.push(`password: "${p.password}"`);
+  if (p.tls !== undefined) fields.push(`tls: ${p.tls}`);
+  if (p.network) fields.push(`network: ${p.network}`);
+  if (p.aid !== undefined) fields.push(`alterId: ${p.aid}`);
+  if (p["ws-opts"]) fields.push(`ws-opts: ${JSON.stringify(p["ws-opts"])}`);
+  return `  - { ${fields.join(", ")} }`;
 }
 
-// --- 基础解析与 Base64 函数 (保持不变) ---
+// --- 通用工具函数 ---
 function safeBase64Decode(str) {
   try {
-    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) base64 += '=';
-    return decodeURIComponent(escape(atob(base64)));
-  } catch (e) { return atob(str); }
+    let b = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (b.length % 4) b += '=';
+    return decodeURIComponent(escape(atob(b)));
+  } catch (e) { return ""; }
 }
 
-function parseVless(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)), type: "vless", server: url.hostname, port: parseInt(url.port), uuid: url.username, cipher: "auto", tls: line.includes("tls") || line.includes("reality"), network: url.searchParams.get("type") || "tcp" }; } catch(e){return null;} }
-function parseVmess(line) { try { const v = JSON.parse(safeBase64Decode(line.replace("vmess://", ""))); return { name: v.ps, type: "vmess", server: v.add, port: parseInt(v.port), uuid: v.id, alterId: parseInt(v.aid || 0), cipher: "auto", tls: !!v.tls, network: v.net || "tcp" }; } catch(e){return null;} }
-function parseSS(line) { try { const url = new URL(line); let auth = safeBase64Decode(url.username); const [m, pw] = auth.split(':'); return { name: decodeURIComponent(url.hash.slice(1)), type: "ss", server: url.hostname, port: parseInt(url.port), cipher: m, password: pw }; } catch(e){return null;} }
-function parseHy2(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)), type: "hysteria2", server: url.hostname, port: parseInt(url.port), password: url.username, udp: true }; } catch(e){return null;} }
-function parseTuic(line) { try { const url = new URL(line); return { name: decodeURIComponent(url.hash.slice(1)), type: "tuic", server: url.hostname, port: parseInt(url.port), uuid: url.username, password: url.password, version: 5 }; } catch(e){return null;} }
+function parseSS(l) { try { const u = new URL(l); const auth = safeBase64Decode(u.username).split(':'); return { name: decodeURIComponent(u.hash.slice(1)), type: "ss", server: u.hostname, port: u.port, cipher: auth[0], password: auth[1] }; } catch(e){return null;} }
+function parseVmess(l) { try { const v = JSON.parse(safeBase64Decode(l.replace("vmess://", ""))); return { name: v.ps, type: "vmess", server: v.add, port: v.port, uuid: v.id, aid: v.aid, tls: !!v.tls, network: v.net }; } catch(e){return null;} }
+function parseVless(l) { try { const u = new URL(l); return { name: decodeURIComponent(u.hash.slice(1)), type: "vless", server: u.hostname, port: u.port, uuid: u.username, tls: l.includes("tls"), network: u.searchParams.get("type") || "tcp" }; } catch(e){return null;} }
+function parseHy2(l) { try { const u = new URL(l); return { name: decodeURIComponent(u.hash.slice(1)), type: "hysteria2", server: u.hostname, port: u.port, password: u.username }; } catch(e){return null;} }
+function parseTuic(l) { try { const u = new URL(l); return { name: decodeURIComponent(u.hash.slice(1)), type: "tuic", server: u.hostname, port: u.port, uuid: u.username, password: u.password }; } catch(e){return null;} }
