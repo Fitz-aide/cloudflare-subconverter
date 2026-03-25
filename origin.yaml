@@ -179,61 +179,71 @@ proxy-groups:
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
-    proxies:    
+    proxies:
+      - DIRECT    
   - name: 🚀🇯🇵JP最低延迟
     type: url-test
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
-    proxies:    
+    proxies:
+      - DIRECT    
   - name: ♻️🇭🇰HK自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
-    proxies:    
+    proxies:
+      - DIRECT    
   - name: 🚀🇭🇰HK最低延迟
     type: url-test
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
     proxies:
+      - DIRECT    
   - name: ♻️🇺🇸US自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
-    proxies:    
+    proxies:
+      - DIRECT    
   - name: 🚀🇺🇸US最低延迟
     type: url-test
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
     proxies:
+      - DIRECT    
   - name: ♻️🇸🇬SG自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
-    proxies:    
+    proxies:
+      - DIRECT    
   - name: 🚀🇸🇬SG最低延迟
     type: url-test
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
     proxies:
+      - DIRECT
   - name: ♻️🇹🇼TW自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
     proxies:    
+      - DIRECT
   - name: 🚀🇹🇼TW最低延迟
     type: url-test
     url: http://cp.cloudflare.com/generate_204
     interval: 600
     tolerance: 300
     proxies:
+      - DIRECT
   - name: ♻️自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
