@@ -65,11 +65,11 @@ export default {
     for (const u of urls) {
       let text = "";
       try {
-        const resp = await fetch(u, {
+        const resp = await fetch(u.trim(), {
           headers: {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "*/*",
-            "Referer": u
+            // 伪装成 v2rayN 客户端，强制机场返回 Base64 节点列表
+            "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1",
+            "Accept": "*/*"
           }
         });
         text = await resp.text();
@@ -96,6 +96,7 @@ export default {
       if (line.startsWith("vmess://")) proxy = parseVmess(line);
       else if (line.startsWith("vless://")) proxy = parseVless(line);
       else if (line.startsWith("ss://")) proxy = parseSS(line);
+      else if (line.startsWith("trojan://")) proxy = parseTrojan(line);
       else if (line.startsWith("hysteria2://") || line.startsWith("hy2://")) proxy = parseHy2(line);
       else if (line.startsWith("tuic://")) proxy = parseTuic(line);
 
@@ -124,7 +125,7 @@ function buildFullClash(template, proxies) {
   let proxyYaml = "proxies:\n";
   const allNames = [];
   
-  // 1. 生成 proxies: 块并收集所有节点名称
+  // 1. 生成 proxies: 块并收集名称
   for (const p of proxies) {
     allNames.push(p.name);
     proxyYaml += `  - name: "${p.name}"\n`;
@@ -132,10 +133,9 @@ function buildFullClash(template, proxies) {
     proxyYaml += `    server: ${p.server}\n`;
     proxyYaml += `    port: ${p.port}\n`;
 
-    const skip = ['name', 'type', 'server', 'port', '_country'];
+    const skip = ['name', 'type', 'server', 'port'];
     for (const [key, value] of Object.entries(p)) {
       if (skip.includes(key) || value === null || value === undefined) continue;
-      
       if (typeof value === 'object' && !Array.isArray(value)) {
         proxyYaml += `    ${key}:\n`;
         for (const [k2, v2] of Object.entries(value)) {
@@ -156,7 +156,6 @@ function buildFullClash(template, proxies) {
     }
   }
 
-  // 2. 替换原模板中的 proxies 块
   let finalYaml = template;
   const proxyRegex = /proxies:[\s\S]*?(?=proxy-groups:)/;
   if (proxyRegex.test(finalYaml)) {
@@ -165,7 +164,6 @@ function buildFullClash(template, proxies) {
     finalYaml = finalYaml.replace("proxies:", proxyYaml);
   }
 
-  // 3. 准备地区匹配数据
   let regionMap = {};
   for (const rule of REGION_RULES) {
     for (const group of rule.groups) {
@@ -182,17 +180,14 @@ function buildFullClash(template, proxies) {
     }
   }
 
-  // 4. 逐行解析模板，执行“追加”逻辑
   let lines = finalYaml.split('\n');
   let newLines = [];
   let inProxyGroups = false;
   let currentGroupName = "";
-  let groupProxiesBuffer = []; // 用于临时存放检测到的策略组内容
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
     
-    // 检查是否进入/退出 proxy-groups
     if (line.trim() === "proxy-groups:") {
       inProxyGroups = true;
       newLines.push(line);
@@ -207,7 +202,6 @@ function buildFullClash(template, proxies) {
       continue;
     }
 
-    // 提取组名
     let nameMatch = line.match(/^\s*-\s*name:\s*(['"]?)(.+?)\1\s*$/);
     if (nameMatch) {
       currentGroupName = nameMatch[2];
@@ -215,36 +209,38 @@ function buildFullClash(template, proxies) {
       continue;
     }
 
-    // 核心逻辑：碰到下一个策略组的开始 (-) 或者块结束，才把 buffer 里的节点插进去
-    // 但为了简单稳定，我们直接定位到当前组的 proxies: 块并寻找它的结束位置
-    newLines.push(line);
-
-    // 如果当前行是 "proxies:"，我们向后扫描，直到找到下一个不再缩进的行
     if (line.match(/^\s*proxies:\s*$/)) {
+      newLines.push(line);
       let indentMatch = line.match(/^(\s*)proxies:/);
       let baseIndent = indentMatch[1];
       let itemIndent = baseIndent + "  ";
 
-      // 继续读取后续行，直到遇到不属于当前 proxies 列表的内容
-      let j = i + 1;
-      while (j < lines.length) {
-        let nextLine = lines[j];
-        // 如果下一行是空行，或者是更浅缩进的行，或者是新的 group (-)
-        if (nextLine.trim() !== "" && !nextLine.startsWith(itemIndent)) {
-          break;
-        }
-        newLines.push(nextLine);
-        j++;
-      }
-      
-      // 在这里插入新节点（此时已达到原列表末尾）
-      if (ALL_PROXIES_GROUPS.includes(currentGroupName)) {
-        allNames.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
-      } else if (regionMap[currentGroupName]) {
+      // --- 分流逻辑开始 ---
+      const isRegionGroup = regionMap[currentGroupName] !== undefined;
+      const isAllGroup = ALL_PROXIES_GROUPS.includes(currentGroupName);
+
+      // A. 如果是地区组，先插入新节点 (置顶)
+      if (isRegionGroup) {
         regionMap[currentGroupName].forEach(n => newLines.push(`${itemIndent}- "${n}"`));
       }
 
-      i = j - 1; // 跳过已处理的行
+      // B. 读取模板原有的节点 (中间层)
+      let j = i + 1;
+      while (j < lines.length) {
+        let nextLine = lines[j];
+        if (nextLine.trim() !== "" && !nextLine.startsWith(itemIndent)) break;
+        if (nextLine.trim() !== "") newLines.push(nextLine);
+        j++;
+      }
+
+      // C. 如果是全局组，最后插入新节点 (追加)
+      if (isAllGroup) {
+        allNames.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+      }
+
+      i = j - 1; 
+    } else {
+      newLines.push(line);
     }
   }
 
@@ -360,41 +356,87 @@ function parseVmess(line) {
 
 function parseSS(line) {
   try {
-    const url = new URL(line);
+    const deepDecode = (str) => {
+      let result = str;
+      try {
+        while (result.includes('%')) {
+          let decoded = decodeURIComponent(result);
+          if (decoded === result) break;
+          result = decoded;
+        }
+      } catch (e) {}
+      return result;
+    };
+
+    let mainPart = line.replace("ss://", "");
+    let name = "";
+    if (mainPart.includes("#")) {
+      const splitHash = mainPart.split("#");
+      mainPart = splitHash[0];
+      name = deepDecode(splitHash[1]);
+    }
+
     let method, password, server, port;
 
-    server = url.hostname;
-    port = parseInt(url.port);
-    const name = decodeURIComponent(url.hash.slice(1)) || server;
+    // 情况 A：标准的 userinfo@addr 格式
+    if (mainPart.includes("@")) {
+      const parts = mainPart.split("@");
+      let userInfo = parts[0];
+      const addrPart = parts[1];
 
-    let authStr = url.username; 
-    
-    if (authStr && !authStr.includes(':')) {
+      // 核心修复：如果 userInfo 不包含冒号，说明它是 Base64 加密的
+      if (!userInfo.includes(":")) {
+        try {
+          const b64 = userInfo.replace(/-/g, '+').replace(/_/g, '/');
+          userInfo = atob(b64 + "===".slice((b64.length + 3) % 4));
+        } catch (e) {}
+      }
+
+      if (userInfo.includes(":")) {
+        method = userInfo.split(":")[0];
+        password = userInfo.split(":").slice(1).join(":");
+      }
+
+      server = addrPart.split(":")[0];
+      port = parseInt(addrPart.split(":")[1]);
+    } 
+    // 情况 B：全 Base64 格式 (旧版)
+    else {
       try {
-        authStr = safeBase64Decode(authStr);
+        const b64 = mainPart.replace(/-/g, '+').replace(/_/g, '/');
+        const decodedMain = atob(b64 + "===".slice((b64.length + 3) % 4));
+        if (decodedMain.includes("@")) {
+          const [auth, addr] = decodedMain.split("@");
+          method = auth.split(":")[0];
+          password = auth.split(":").slice(1).join(":");
+          server = addr.split(":")[0];
+          port = parseInt(addr.split(":")[1]);
+        }
       } catch (e) {}
     }
 
-    if (authStr && authStr.includes(':')) {
-      const parts = authStr.split(':');
-      method = parts[0];
-      password = parts.slice(1).join(':'); 
-    } else {
-      method = url.username || "unknown-method";
-      password = url.password || "";
-    }
+    const fixChinese = (s) => {
+      try {
+        return decodeURIComponent(escape(s));
+      } catch (e) {
+        return s;
+      }
+    };
+
+    name = fixChinese(name) || server;
+
+    if (!port || isNaN(port)) return null;
 
     return {
-      name: name,
+      name: name.trim().replace(/[\[\]"]/g, ''),
       type: "ss",
       server: server,
       port: port,
-      cipher: method,
-      password: password,
+      cipher: method || "aes-256-gcm",
+      password: password || "",
       udp: true
     };
   } catch (e) {
-    console.error("SS Parse Error:", e);
     return null;
   }
 }
@@ -446,6 +488,68 @@ function parseTuic(line) {
       "udp-relay-mode": params.get("udp_relay_mode") || "native"
     };
   } catch (e) { return null; }
+}
+
+function parseTrojan(line) {
+  try {
+    // 1. 定义深度递归解码函数
+    const deepDecode = (str) => {
+      let result = str;
+      try {
+        while (result.includes('%')) {
+          let decoded = decodeURIComponent(result);
+          if (decoded === result) break;
+          result = decoded;
+        }
+      } catch (e) {}
+      return result;
+    };
+
+    // 2. 预处理：手动切分 hash 部分防止 URL 类库解析偏差
+    let mainPart = line.replace("trojan://", "");
+    let name = "";
+    if (mainPart.includes("#")) {
+      const splitHash = mainPart.split("#");
+      mainPart = splitHash[0];
+      name = deepDecode(splitHash[1]);
+    }
+
+    // 3. 使用 URL 类库解析主体参数
+    const url = new URL("trojan://" + mainPart);
+    const params = url.searchParams;
+
+    // 4. 最后的乱码修正补丁
+    const fixChinese = (s) => {
+      try {
+        return decodeURIComponent(escape(s));
+      } catch (e) {
+        return s;
+      }
+    };
+
+    name = fixChinese(name) || url.hostname;
+
+    return {
+      name: name.trim().replace(/[\[\]"]/g, ''),
+      type: "trojan",
+      server: url.hostname,
+      port: parseInt(url.port),
+      password: url.username,
+      udp: true,
+      sni: params.get("sni") || params.get("peer") || "",
+      "skip-cert-verify": ["1", "true"].includes((params.get("allowInsecure") || params.get("insecure") || "").toLowerCase()),
+      network: params.get("type") || "tcp",
+      "grpc-opts": params.get("type") === "grpc" ? {
+        "grpc-service-name": params.get("serviceName") || ""
+      } : undefined,
+      "ws-opts": params.get("type") === "ws" ? {
+        path: params.get("path") || "/",
+        headers: params.get("host") ? { "Host": params.get("host") } : undefined
+      } : undefined
+    };
+  } catch (e) {
+    return null;
+  }
 }
 
 function safeBase64Decode(str) {
