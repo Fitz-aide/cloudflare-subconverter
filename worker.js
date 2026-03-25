@@ -5,6 +5,7 @@
  */
 
 // ================= 1. 核心配置区 =================
+// 默认规则配置文件，默认获取环境变量DEFAULT_TEMPLATE_URL
 const DEFAULT_TEMPLATE_URL = "https://raw.githubusercontent.com/你的用户名/你的仓库/main/origin.yaml"; 
 
 // ================= 2. 策略组分类配置区 =================
@@ -34,6 +35,11 @@ export default {
   async fetch(request, env) {
     const reqUrl = new URL(request.url);
     
+    // ====== 新增：提取名称参数，如果没有提供则使用默认名称 ======
+    const customName = reqUrl.searchParams.get("name") || "CF-SUB";
+    // 解决中文名称在 Header 中乱码的问题
+    const encodedName = encodeURIComponent(customName);
+    
     let subUrl = "";
     const urlMatch = reqUrl.search.match(/url=(.*)/);
     if (urlMatch) {
@@ -61,28 +67,52 @@ export default {
 
     const urls = subUrl.split("|");
     let allLines = [];
+	
+	// ====== 新增：用于保存提取到的流量信息 ======
+    let subUserInfo = "";
 
     for (const u of urls) {
       let text = "";
+      let targetUrl = u.trim();
       try {
-        const resp = await fetch(u.trim(), {
+        // --- 1. 尝试以 Clash 身份请求 (为了拿流量信息) ---
+        let resp = await fetch(targetUrl, {
           headers: {
-            // 伪装成 v2rayN 客户端，强制机场返回 Base64 节点列表
-            "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1",
+            "User-Agent": "Clash/1.18.0 Stash/2.5.0",
             "Accept": "*/*"
           }
         });
+
+        // 提取流量信息
+        const info = resp.headers.get("subscription-userinfo");
+        if (info && !subUserInfo) subUserInfo = info;
+
         text = await resp.text();
+
+        // --- 2. 检查内容：如果返回的是 YAML (包含 'proxies:') 或不是 Base64 ---
+        // 这种情况下，我们需要换回 v2rayN 的 UA 重新请求纯节点列表
+        if (text.includes("proxies:") || text.includes("proxy-groups:") || !isBase64(text.trim())) {
+          const respRetry = await fetch(targetUrl, {
+            headers: {
+              "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1",
+              "Accept": "*/*"
+            }
+          });
+          text = await respRetry.text();
+        }
       } catch (e) {
-        console.log(`节点抓取失败: ${u} ${e}`);
+        console.log(`节点抓取失败: ${targetUrl} ${e}`);
       }
 
       if (!text) continue;
 
       try {
-        text = atob(text.trim());
-      } catch {}
-      allLines.push(...text.split("\n"));
+        // 尝试 Base64 解码，失败则保持原样
+        const decoded = atob(text.trim());
+        allLines.push(...decoded.split("\n"));
+      } catch {
+        allLines.push(...text.split("\n"));
+      }
     }
 
     let proxies = [];
@@ -114,8 +144,35 @@ export default {
     // 执行核心的注入与分类逻辑
     const finalYaml = buildFullClash(template, proxies);
 
+    // ====== 修改：增加 Content-Disposition 和 profile-title 响应头 ======
+    // --- 修改此处：智能判断是否为浏览器请求 ---
+    const userAgent = (request.headers.get("User-Agent") || "").toLowerCase();
+    
+    // 识别浏览器 (包含 mozilla 且不包含代理客户端常用关键字)
+    const isBrowser = userAgent.includes("mozilla") && 
+                      !userAgent.includes("clash") && 
+                      !userAgent.includes("stash") && 
+                      !userAgent.includes("shadowrocket") &&
+                      !userAgent.includes("surge");
+	// ====== 新增：如果没有获取到，则设置默认值 (已用0，总共0，不过期) ======
+    if (!subUserInfo) {
+        subUserInfo = "upload=0; download=0; total=0; expire=0";
+    }				  
+
+    const responseHeaders = {
+        "Content-Type": "text/yaml; charset=utf-8",
+        "profile-title": customName,
+        "profile-update-interval": "24",
+		"subscription-userinfo": subUserInfo
+    };
+
+    // 只有非浏览器请求才加上 attachment 下载头
+    if (!isBrowser) {
+        responseHeaders["Content-Disposition"] = `attachment; filename*=UTF-8''${encodedName}.yaml`;
+    }
+
     return new Response(finalYaml, {
-      headers: { "Content-Type": "text/yaml; charset=utf-8" }
+        headers: responseHeaders
     });
   }
 };
@@ -550,6 +607,13 @@ function parseTrojan(line) {
   } catch (e) {
     return null;
   }
+}
+
+// 判断字符串是否为 Base64 格式
+function isBase64(str) {
+  if (!str || str.length % 4 !== 0) return false;
+  const b64Reg = /^[A-Za-z0-9+/=]+$/;
+  return b64Reg.test(str);
 }
 
 function safeBase64Decode(str) {
