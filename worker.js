@@ -39,6 +39,9 @@ export default {
     const customName = reqUrl.searchParams.get("name") || "CF-SUB";
     // 解决中文名称在 Header 中乱码的问题
     const encodedName = encodeURIComponent(customName);
+	
+    // ====== 新增：提取更新间隔参数（单位：小时），默认 24 小时 ======
+    const updateInterval = reqUrl.searchParams.get("interval") || "24";
     
     let subUrl = "";
     const urlMatch = reqUrl.search.match(/url=(.*)/);
@@ -162,7 +165,8 @@ export default {
     const responseHeaders = {
         "Content-Type": "text/yaml; charset=utf-8",
         "profile-title": customName,
-        "profile-update-interval": "24",
+        "profile-update-interval": updateInterval,
+        "X-Config-Update-Interval": updateInterval,
 		"subscription-userinfo": subUserInfo
     };
 
