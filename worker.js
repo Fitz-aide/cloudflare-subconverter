@@ -8,26 +8,40 @@
 // 默认规则配置文件，默认获取环境变量DEFAULT_TEMPLATE_URL
 const DEFAULT_TEMPLATE_URL = "https://raw.githubusercontent.com/你的用户名/你的仓库/main/origin.yaml"; 
 
-// ================= 2. 策略组分类配置区 =================
-// 填入需要包含【所有节点】的策略组名称
-const ALL_PROXIES_GROUPS = [
-  "✅节点选择", 
-  "🕸GPT", 
-  "🎧Spotify", 
-  "🚀最低延迟", 
-  "♻️自动切换", 
-  "⚖️负载均衡"
+// ================= 2. 策略组分类与动态注入配置区 =================
+
+// 1. 地区识别关键词 (根据节点名称自动归类)
+const REGIONS = [
+  { prefix: "🇯🇵JP", keywords: ["JP", "Japan", "日本"] },
+  { prefix: "🇭🇰HK", keywords: ["HK", "Hong", "Kong", "香港"] },
+  { prefix: "🇸🇬SG", keywords: ["SG", "Singapore", "狮城", "新加坡"] },
+  { prefix: "🇺🇸US", keywords: ["US", "America", "美国"] },
+  { prefix: "🇹🇼TW", keywords: ["TW", "Taiwan", "台湾", "新北"] },
+  { prefix: "🇨🇦CA", keywords: ["CA", "Canada", "加拿大"] },
+  { prefix: "🇬🇧UK", keywords: ["UK", "United Kingdom", "英国"] }
 ];
 
-// 填入地区匹配规则：keywords 是匹配节点名称的关键词，groups 是目标策略组名称
-const REGION_RULES = [
-  { keywords: ["HK", "Hong", "Kong", "香港"], groups: ["🚀🇭🇰HK最低延迟", "♻️🇭🇰HK自动切换"] },
-  { keywords: ["JP", "Japan", "日本"], groups: ["🚀🇯🇵JP最低延迟", "♻️🇯🇵JP自动切换"] },
-  { keywords: ["SG", "Singapore", "狮城", "新加坡"], groups: ["🚀🇸🇬SG最低延迟", "♻️🇸🇬SG自动切换"] },
-  { keywords: ["TW", "Taiwan", "台湾", "新北"], groups: ["🚀🇹🇼TW最低延迟", "♻️🇹🇼TW自动切换"] },
-  { keywords: ["US", "America", "美国"], groups: ["🚀🇺🇸US最低延迟", "♻️🇺🇸US自动切换"] },
-  { keywords: ["CA", "Canada", "加拿大"], groups: ["🚀🇨🇦CA最低延迟", "♻️🇨🇦CA自动切换"] },
-  { keywords: ["UK", "United Kingdom", "英国"], groups: ["🚀🇬🇧UK最低延迟", "♻️🇬🇧UK自动切换"] }
+// 2. 生成哪些类型的地区组 (当某地区有节点时，自动生成以下组)
+const DYNAMIC_GROUP_TYPES = [
+  { suffix: "最低延迟", type: "url-test", icon: "🚀" },
+  { suffix: "自动切换", type: "fallback", icon: "♻️" }
+];
+
+// 3. 将【新生成的地区组】整体插在这个策略组的后面 (模板中需存在此组名)
+const INSERT_AFTER_GROUP = "🅰️Adobe";
+
+// 4. 定义需要注入【地区组】或【全部单节点】的父级组
+// target: 模板中已有的目标策略组
+// position: "front" (插在前面) 或 "back" (插在后面)
+// includeTypes: 包含哪些动态组后缀
+// includeAllNodes: 是否要把所有单节点追加到末尾 (相当于取代原来的 ALL_PROXIES_GROUPS)
+const PARENT_GROUPS_CONFIG = [
+  { target: "✅节点选择", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
+  { target: "🕸GPT", position: "back", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
+  { target: "🎧Spotify", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
+  { target: "🚀最低延迟", position: "front", includeTypes: [], includeAllNodes: true },
+  { target: "♻️自动切换", position: "front", includeTypes: [], includeAllNodes: true },
+  { target: "⚖️负载均衡", position: "front", includeTypes: [], includeAllNodes: true }
 ];
 // =======================================================
 
@@ -181,12 +195,14 @@ export default {
   }
 };
 
-// --- 核心：生成节点 -> 注入模板 -> 按地区归类策略组 (追加模式) ---
+// --- 核心：生成节点 -> 动态生成地区组 -> 智能注入模板 ---
 function buildFullClash(template, proxies) {
   let proxyYaml = "proxies:\n";
   const allNames = [];
-  
-  // 1. 生成 proxies: 块并收集名称
+  let regionNodes = {};
+  REGIONS.forEach(r => regionNodes[r.prefix] = []);
+
+  // 1. 生成 proxies: 块并收集名称与地区分类
   for (const p of proxies) {
     allNames.push(p.name);
     proxyYaml += `  - name: "${p.name}"\n`;
@@ -215,6 +231,14 @@ function buildFullClash(template, proxies) {
         proxyYaml += `    ${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
       }
     }
+
+    // 地区分类归纳
+    for (let r of REGIONS) {
+      if (r.keywords.some(kw => p.name.toLowerCase().includes(kw.toLowerCase()))) {
+        regionNodes[r.prefix].push(p.name);
+        break; 
+      }
+    }
   }
 
   let finalYaml = template;
@@ -225,37 +249,44 @@ function buildFullClash(template, proxies) {
     finalYaml = finalYaml.replace("proxies:", proxyYaml);
   }
 
-  let regionMap = {};
-  for (const rule of REGION_RULES) {
-    for (const group of rule.groups) {
-      regionMap[group] = [];
-    }
-  }
+  // 2. 【核心修改】动态生成地区组 YAML (按地区归类：日本最低、日本自动、香港最低、香港自动...)
+  let dynamicGroupsYaml = "";
+  let activeDynamicGroupsByRegion = {}; // 存储每个地区生成的组
 
-  for (const name of allNames) {
-    for (const rule of REGION_RULES) {
-      if (rule.keywords.some(kw => name.toLowerCase().includes(kw.toLowerCase()))) {
-        rule.groups.forEach(g => regionMap[g].push(name));
-        break; 
+  for (const [prefix, nodes] of Object.entries(regionNodes)) {
+    if (nodes.length > 0) {
+      activeDynamicGroupsByRegion[prefix] = [];
+      
+      for (const t of DYNAMIC_GROUP_TYPES) {
+        const groupName = `${t.icon}${prefix}${t.suffix}`;
+        activeDynamicGroupsByRegion[prefix].push(groupName);
+
+        dynamicGroupsYaml += `  - name: "${groupName}"\n`;
+        dynamicGroupsYaml += `    type: ${t.type}\n`;
+        dynamicGroupsYaml += `    url: http://cp.cloudflare.com/generate_204\n`;
+        dynamicGroupsYaml += `    interval: 600\n`;
+        dynamicGroupsYaml += `    tolerance: 300\n`;
+        dynamicGroupsYaml += `    proxies:\n`;
+        nodes.forEach(n => dynamicGroupsYaml += `      - "${n}"\n`);
       }
     }
   }
 
+  // 3. 逐行处理 proxy-groups，精准注入
   let lines = finalYaml.split('\n');
   let newLines = [];
   let inProxyGroups = false;
   let currentGroupName = "";
+  let insideInsertTargetBlock = false;
+  let dynamicGroupsInjected = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
-    
+
     if (line.trim() === "proxy-groups:") {
       inProxyGroups = true;
       newLines.push(line);
       continue;
-    }
-    if (inProxyGroups && /^[a-zA-Z]/.test(line.trim()) && !line.startsWith(" ") && line.trim() !== "proxy-groups:") {
-      inProxyGroups = false;
     }
 
     if (!inProxyGroups) {
@@ -263,46 +294,82 @@ function buildFullClash(template, proxies) {
       continue;
     }
 
+    if (/^[a-zA-Z]/.test(line) && !line.startsWith(" ") && line.trim() !== "proxy-groups:") {
+       if (!dynamicGroupsInjected && dynamicGroupsYaml.trim() !== "") {
+           newLines.push(...dynamicGroupsYaml.trimEnd().split('\n'));
+           dynamicGroupsInjected = true;
+       }
+       inProxyGroups = false;
+       newLines.push(line);
+       continue;
+    }
+
     let nameMatch = line.match(/^\s*-\s*name:\s*(['"]?)(.+?)\1\s*$/);
     if (nameMatch) {
-      currentGroupName = nameMatch[2];
-      newLines.push(line);
-      continue;
+       if (insideInsertTargetBlock && !dynamicGroupsInjected && dynamicGroupsYaml.trim() !== "") {
+          newLines.push(...dynamicGroupsYaml.trimEnd().split('\n'));
+          dynamicGroupsInjected = true;
+          insideInsertTargetBlock = false;
+       }
+       currentGroupName = nameMatch[2];
+       if (currentGroupName === INSERT_AFTER_GROUP) {
+          insideInsertTargetBlock = true;
+       }
     }
 
-    if (line.match(/^\s*proxies:\s*$/)) {
-      newLines.push(line);
-      let indentMatch = line.match(/^(\s*)proxies:/);
-      let baseIndent = indentMatch[1];
-      let itemIndent = baseIndent + "  ";
+    if (line.match(/^\s*proxies:\s*$/) && currentGroupName) {
+       newLines.push(line);
+       let indentMatch = line.match(/^(\s*)proxies:/);
+       let itemIndent = indentMatch[1] + "  ";
 
-      // --- 分流逻辑开始 ---
-      const isRegionGroup = regionMap[currentGroupName] !== undefined;
-      const isAllGroup = ALL_PROXIES_GROUPS.includes(currentGroupName);
+       let targetConfig = PARENT_GROUPS_CONFIG.find(t => t.target === currentGroupName);
+       let dynamicGroupsToInject = [];
+       
+       if (targetConfig) {
+          // 【核心修改】读取配置，按地区顺序绑定吐出
+          for (const [prefix, groups] of Object.entries(activeDynamicGroupsByRegion)) {
+             groups.forEach(groupName => {
+                 // 检查这个组名的后缀（最低延迟/自动切换）是否在配置的 includeTypes 中
+                 const hasType = targetConfig.includeTypes.some(type => groupName.endsWith(type));
+                 if (hasType) {
+                     dynamicGroupsToInject.push(groupName);
+                 }
+             });
+          }
+       }
 
-      // A. 如果是地区组，先插入新节点 (置顶)
-      if (isRegionGroup) {
-        regionMap[currentGroupName].forEach(n => newLines.push(`${itemIndent}- "${n}"`));
-      }
+       // A. 插入前面 (front)
+       if (targetConfig && targetConfig.position === "front") {
+           dynamicGroupsToInject.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+       }
 
-      // B. 读取模板原有的节点 (中间层)
-      let j = i + 1;
-      while (j < lines.length) {
-        let nextLine = lines[j];
-        if (nextLine.trim() !== "" && !nextLine.startsWith(itemIndent)) break;
-        if (nextLine.trim() !== "") newLines.push(nextLine);
-        j++;
-      }
+       // B. 读取并保留模板原有的代理 (比如 DIRECT 或写死的全局组)
+       let j = i + 1;
+       while (j < lines.length) {
+         let nextLine = lines[j];
+         if (nextLine.trim() !== "" && !nextLine.startsWith(itemIndent)) break;
+         if (nextLine.trim() !== "") newLines.push(nextLine);
+         j++;
+       }
+       i = j - 1; 
 
-      // C. 如果是全局组，最后插入新节点 (追加)
-      if (isAllGroup) {
-        allNames.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
-      }
+       // C. 插入后面 (back)
+       if (targetConfig && targetConfig.position === "back") {
+           dynamicGroupsToInject.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+       }
 
-      i = j - 1; 
-    } else {
-      newLines.push(line);
+       // D. 在末尾追加所有单节点 (原本的 ALL_PROXIES_GROUPS 逻辑)
+       if (targetConfig && targetConfig.includeAllNodes) {
+           allNames.forEach(n => newLines.push(`${itemIndent}- "${n}"`));
+       }
+       continue;
     }
+
+    newLines.push(line);
+  }
+
+  if (insideInsertTargetBlock && !dynamicGroupsInjected && dynamicGroupsYaml.trim()) {
+       newLines.push(...dynamicGroupsYaml.trimEnd().split('\n'));
   }
 
   return newLines.join('\n');
