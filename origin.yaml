@@ -86,16 +86,6 @@ proxy-groups:
   - name: ✅节点选择
     type: select
     proxies:
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
       - 🚀最低延迟
       - ♻️自动切换
       - ⚖️负载均衡
@@ -103,147 +93,28 @@ proxy-groups:
   - name: 🕸GPT
     type: select
     proxies:
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换      
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
+
   - name: 🎧Spotify
     type: select
     proxies:
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
       - 🚀最低延迟
       - ♻️自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
   - name: Ⓜ️微软服务
     type: select
     proxies:
       - 🔗直连
       - ✅节点选择
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
   - name: 🍎苹果
     type: select
     proxies:
       - 🔗直连
       - ✅节点选择
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换
   - name: 🅰️Adobe
     type: select
     proxies:
       - REJECT
       - DIRECT
-      - ✅节点选择
-      - 🚀🇭🇰HK最低延迟
-      - ♻️🇭🇰HK自动切换
-      - 🚀🇯🇵JP最低延迟
-      - ♻️🇯🇵JP自动切换
-      - 🚀🇸🇬SG最低延迟
-      - ♻️🇸🇬SG自动切换
-      - 🚀🇹🇼TW最低延迟
-      - ♻️🇹🇼TW自动切换
-      - 🚀🇺🇸US最低延迟
-      - ♻️🇺🇸US自动切换 
-  - name: ♻️🇯🇵JP自动切换
-    type: fallback
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: 🚀🇯🇵JP最低延迟
-    type: url-test
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: ♻️🇭🇰HK自动切换
-    type: fallback
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: 🚀🇭🇰HK最低延迟
-    type: url-test
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: ♻️🇺🇸US自动切换
-    type: fallback
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: 🚀🇺🇸US最低延迟
-    type: url-test
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: ♻️🇸🇬SG自动切换
-    type: fallback
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT    
-  - name: 🚀🇸🇬SG最低延迟
-    type: url-test
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT
-  - name: ♻️🇹🇼TW自动切换
-    type: fallback
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:    
-      - DIRECT
-  - name: 🚀🇹🇼TW最低延迟
-    type: url-test
-    url: http://cp.cloudflare.com/generate_204
-    interval: 600
-    tolerance: 300
-    proxies:
-      - DIRECT
+      - ✅节点选择 
   - name: ♻️自动切换
     type: fallback
     url: http://cp.cloudflare.com/generate_204
