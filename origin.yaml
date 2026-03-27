@@ -143,15 +143,13 @@ proxy-groups:
     proxies:
       - REJECT
       - DIRECT
-      - 🚀最低延迟
-      - ♻️自动切换
+      - ✅节点选择
   - name: ⛔过滤
     type: select
     proxies:
       - REJECT
       - DIRECT
-      - 🚀最低延迟
-      - ♻️自动切换
+      - ✅节点选择
   - name: 中转
     type: select
     proxies:
