@@ -92,35 +92,42 @@ export default {
     for (const u of urls) {
       let text = "";
       let targetUrl = u.trim();
-      try {
-        // --- 1. 尝试以 Clash 身份请求 (为了拿流量信息) ---
-        let resp = await fetch(targetUrl, {
-          headers: {
-            "User-Agent": "Clash/1.18.0 Stash/2.5.0",
-            "Accept": "*/*"
-          }
-        });
+	  if (targetUrl.startsWith("http")) {
+        // 如果是链接，执行 fetch 抓取
+        try {
+			// --- 1. 尝试以 Clash 身份请求 (为了拿流量信息) ---
+			let resp = await fetch(targetUrl, {
+			  headers: {
+				"User-Agent": "Clash/1.18.0 Stash/2.5.0",
+				"Accept": "*/*"
+			  }
+			});
 
-        // 提取流量信息
-        const info = resp.headers.get("subscription-userinfo");
-        if (info && !subUserInfo) subUserInfo = info;
+			// 提取流量信息
+			const info = resp.headers.get("subscription-userinfo");
+			if (info && !subUserInfo) subUserInfo = info;
 
-        text = await resp.text();
+			text = await resp.text();
 
-        // --- 2. 检查内容：如果返回的是 YAML (包含 'proxies:') 或不是 Base64 ---
-        // 这种情况下，我们需要换回 v2rayN 的 UA 重新请求纯节点列表
-        if (text.includes("proxies:") || text.includes("proxy-groups:") || !isBase64(text.trim())) {
-          const respRetry = await fetch(targetUrl, {
-            headers: {
-              "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1",
-              "Accept": "*/*"
-            }
-          });
-          text = await respRetry.text();
-        }
-      } catch (e) {
-        console.log(`节点抓取失败: ${targetUrl} ${e}`);
+			// --- 2. 检查内容：如果返回的是 YAML (包含 'proxies:') 或不是 Base64 ---
+			// 这种情况下，我们需要换回 v2rayN 的 UA 重新请求纯节点列表
+			if (text.includes("proxies:") || text.includes("proxy-groups:") || !isBase64(text.trim())) {
+			  const respRetry = await fetch(targetUrl, {
+				headers: {
+				  "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1",
+				  "Accept": "*/*"
+				}
+			  });
+			  text = await respRetry.text();
+			}
+		  } catch (e) {
+			console.log(`节点抓取失败: ${targetUrl} ${e}`);
+		  }
+      } else {
+        // 如果不是链接，直接当做原始节点文本处理
+        allLines.push(targetUrl); 
       }
+      
 
       if (!text) continue;
 
