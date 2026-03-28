@@ -36,9 +36,10 @@ const INSERT_AFTER_GROUP = "🅰️Adobe";
 // includeTypes: 包含哪些动态组后缀
 // includeAllNodes: 是否要把所有单节点追加到末尾 (相当于取代原来的 ALL_PROXIES_GROUPS)
 const PARENT_GROUPS_CONFIG = [
-  { target: "✅节点选择", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
+  { target: "✅节点选择", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
   { target: "🕸GPT", position: "back", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
   { target: "🎧Spotify", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
+  { target: "🍎苹果", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
   { target: "🚀最低延迟", position: "front", includeTypes: [], includeAllNodes: true },
   { target: "♻️自动切换", position: "front", includeTypes: [], includeAllNodes: true },
   { target: "⚖️负载均衡", position: "front", includeTypes: [], includeAllNodes: true }
