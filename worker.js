@@ -45,116 +45,152 @@ const PARENT_GROUPS_CONFIG = [
 
 export default {
   async fetch(request, env) {
-    const reqUrl = new URL(request.url);
-    const customName = reqUrl.searchParams.get("name") || "CF-SUB";
-    const encodedName = encodeURIComponent(customName);
-    const updateInterval = reqUrl.searchParams.get("interval") || "24";
-    
-    let subUrl = "";
-    const urlMatch = reqUrl.search.match(/url=(.*)/);
-    if (urlMatch) {
-      subUrl = urlMatch[1];
-    } else {
-      return new Response("缺少订阅地址 (Missing url)", { status: 400 });
-    }
-
-    const templateUrl = (env && env.origin) ? env.origin : DEFAULT_TEMPLATE_URL;
-    let template = "";
+    let debugLog = "--- 订阅转换调试日志 ---\n"; // 初始化错误捕捉日志
     try {
-      const tResp = await fetch(templateUrl);
-      if (tResp.ok) template = await tResp.text();
-    } catch (e) {
-      console.log(`模板拉取失败: ${e}`);
-    }
+      const reqUrl = new URL(request.url);
+      const customName = reqUrl.searchParams.get("name") || "CF-SUB";
+      const encodedName = encodeURIComponent(customName);
+      const updateInterval = reqUrl.searchParams.get("interval") || "24";
+      
+      let subUrl = "";
+      const urlMatch = reqUrl.search.match(/url=(.*)/);
+      if (urlMatch) {
+        subUrl = urlMatch[1];
+      } else {
+        return new Response("缺少订阅地址 (Missing url)", { status: 400 });
+      }
 
-    if (!template) {
-      return new Response("无法读取 origin.yaml 模板，请检查链接。", { status: 500 });
-    }
+      const templateUrl = (env && env.origin) ? env.origin : DEFAULT_TEMPLATE_URL;
+      let template = "";
+      try {
+        const tResp = await fetch(templateUrl);
+        if (tResp.ok) {
+          template = await tResp.text();
+          debugLog += `[模板] 获取成功: ${templateUrl}\n`;
+        } else {
+          debugLog += `[模板] 获取失败，状态码: ${tResp.status}\n`;
+        }
+      } catch (e) {
+        debugLog += `[模板] 请求异常: ${e.message}\n`;
+      }
 
-    const urls = subUrl.split("|");
-    let allLines = [];
-    let subUserInfo = "";
+      if (!template) {
+        return new Response(`无法读取 origin.yaml 模板。\n\n${debugLog}`, { status: 500 });
+      }
 
-    for (const u of urls) {
-      let text = "";
-      let targetUrl = u.trim();
-      if (targetUrl.startsWith("http")) {
-        try {
-          let resp = await fetch(targetUrl, {
-            headers: { "User-Agent": "Clash/1.18.0 Stash/2.5.0", "Accept": "*/*" }
-          });
+      const urls = subUrl.split("|");
+      let allLines = [];
+      let subUserInfo = "";
 
-          const info = resp.headers.get("subscription-userinfo");
-          if (info && !subUserInfo) subUserInfo = info;
+      for (const u of urls) {
+        let text = "";
+        let targetUrl = u.trim();
+        debugLog += `\n[抓取] 目标: ${targetUrl}\n`;
 
-          text = await resp.text();
-
-          // 检查是否需要重新请求
-          if (text.includes("proxies:") || text.includes("proxy-groups:") || !isBase64(text.trim())) {
-            const respRetry = await fetch(targetUrl, {
-              headers: { "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1", "Accept": "*/*" }
+        if (targetUrl.startsWith("http")) {
+          try {
+            let resp = await fetch(targetUrl, {
+              headers: { "User-Agent": "Clash/1.18.0 Stash/2.5.0", "Accept": "*/*" }
             });
-            text = await respRetry.text();
+
+            debugLog += `[抓取] 初始请求状态: ${resp.status}\n`;
+            const info = resp.headers.get("subscription-userinfo");
+            if (info && !subUserInfo) subUserInfo = info;
+
+            text = await resp.text();
+
+            // 检查是否需要重新请求
+            if (text.includes("proxies:") || text.includes("proxy-groups:") || !isBase64(text.trim()) || text.includes("Invalid")) {
+              debugLog += `[抓取] 识别为 YAML 或非 Base64，尝试 v2rayN UA 重试...\n`;
+              const respRetry = await fetch(targetUrl, {
+                headers: { "User-Agent": "v2rayN/6.23 v2ray-core/5.14.1", "Accept": "*/*" }
+              });
+              text = await respRetry.text();
+              debugLog += `[抓取] 重试请求状态: ${respRetry.status}\n`;
+            }
+          } catch (e) {
+            debugLog += `[抓取] 失败: ${e.message}\n`;
+          }
+        } else {
+          allLines.push(targetUrl); 
+          debugLog += `[抓取] 识别为静态单行节点\n`;
+        }
+
+        if (!text) {
+          debugLog += `[抓取] 警告: 未获取到任何内容\n`;
+          continue;
+        }
+
+        try {
+          // 处理 Base64
+          const cleanText = text.trim().replace(/\s/g, '');
+          const decoded = atob(cleanText);
+          allLines.push(...decoded.split("\n"));
+          debugLog += `[解码] Base64 解码成功，获取行数: ${decoded.split("\n").length}\n`;
+        } catch (e) {
+          allLines.push(...text.split("\n"));
+          debugLog += `[解码] 尝试明文解析，内容前300位: ${text.substring(0, 300).replace(/\n/g, ' ')}...\n`;
+        }
+      }
+
+      let proxies = [];
+      for (let line of allLines) {
+        line = line.trim();
+        if (!line || line.length < 10) continue;
+
+        let proxy = null;
+        try {
+          if (line.startsWith("vmess://")) proxy = parseVmess(line);
+          else if (line.startsWith("vless://")) proxy = parseVless(line);
+          else if (line.startsWith("ss://")) proxy = parseSS(line);
+          else if (line.startsWith("trojan://")) proxy = parseTrojan(line);
+          else if (line.startsWith("hysteria2://") || line.startsWith("hy2://")) proxy = parseHy2(line);
+          else if (line.startsWith("tuic://")) proxy = parseTuic(line);
+
+          if (proxy) {
+            proxy.name = proxy.name.replace(/[\[\]"]/g, '').trim();
+            proxies.push(proxy);
           }
         } catch (e) {
-          console.log(`节点抓取失败: ${targetUrl} ${e}`);
+          // 仅单个节点解析失败不记录在 debugLog，防止日志过长
         }
-      } else {
-        allLines.push(targetUrl); 
       }
 
-      if (!text) continue;
+      debugLog += `\n[汇总] 最终有效节点总数: ${proxies.length}\n`;
 
-      try {
-        const decoded = atob(text.trim());
-        allLines.push(...decoded.split("\n"));
-      } catch {
-        allLines.push(...text.split("\n"));
+      if (proxies.length === 0) {
+        return new Response(`未解析到任何有效节点。\n\n${debugLog}`, { 
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+          status: 500 
+        });
       }
+
+      // 以下部分保持原样逻辑
+      const finalYaml = buildFullClash(template, proxies);
+      const userAgent = (request.headers.get("User-Agent") || "").toLowerCase();
+      const isBrowser = userAgent.includes("mozilla") && 
+                        !["clash", "stash", "shadowrocket", "surge"].some(k => userAgent.includes(k));
+
+      if (!subUserInfo) subUserInfo = "upload=0; download=0; total=0; expire=0";
+
+      const responseHeaders = {
+        "Content-Type": "text/yaml; charset=utf-8",
+        "profile-title": customName,
+        "profile-update-interval": updateInterval,
+        "X-Config-Update-Interval": updateInterval,
+        "subscription-userinfo": subUserInfo
+      };
+
+      if (!isBrowser) {
+        responseHeaders["Content-Disposition"] = `attachment; filename*=UTF-8''${encodedName}.yaml`;
+      }
+
+      return new Response(finalYaml, { headers: responseHeaders });
+
+    } catch (globalError) {
+      // 全局兜底捕捉
+      return new Response(`Worker 崩溃: ${globalError.message}\n\n${debugLog}`, { status: 500 });
     }
-
-    let proxies = [];
-    for (let line of allLines) {
-      line = line.trim();
-      if (!line) continue;
-
-      let proxy = null;
-      if (line.startsWith("vmess://")) proxy = parseVmess(line);
-      else if (line.startsWith("vless://")) proxy = parseVless(line);
-      else if (line.startsWith("ss://")) proxy = parseSS(line);
-      else if (line.startsWith("trojan://")) proxy = parseTrojan(line);
-      else if (line.startsWith("hysteria2://") || line.startsWith("hy2://")) proxy = parseHy2(line);
-      else if (line.startsWith("tuic://")) proxy = parseTuic(line);
-
-      if (!proxy) continue;
-      proxy.name = proxy.name.replace(/[\[\]"]/g, '').trim();
-      proxies.push(proxy);
-    }
-
-    if (proxies.length === 0) {
-      return new Response("未解析到任何有效节点", { status: 500 });
-    }
-
-    const finalYaml = buildFullClash(template, proxies);
-    const userAgent = (request.headers.get("User-Agent") || "").toLowerCase();
-    const isBrowser = userAgent.includes("mozilla") && 
-                      !["clash", "stash", "shadowrocket", "surge"].some(k => userAgent.includes(k));
-
-    if (!subUserInfo) subUserInfo = "upload=0; download=0; total=0; expire=0";
-
-    const responseHeaders = {
-      "Content-Type": "text/yaml; charset=utf-8",
-      "profile-title": customName,
-      "profile-update-interval": updateInterval,
-      "X-Config-Update-Interval": updateInterval,
-      "subscription-userinfo": subUserInfo
-    };
-
-    if (!isBrowser) {
-      responseHeaders["Content-Disposition"] = `attachment; filename*=UTF-8''${encodedName}.yaml`;
-    }
-
-    return new Response(finalYaml, { headers: responseHeaders });
   }
 };
 
