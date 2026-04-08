@@ -301,7 +301,9 @@ rules:
  - DOMAIN,play-edge.itunes.apple.com,🍎苹果
  - DOMAIN-SUFFIX,tv.apple.com,🍎苹果
  - DOMAIN-SUFFIX,iadsdk.apple.com,🍎苹果
+ - DOMAIN-KEYWORD,ai,🤖AI
  - DOMAIN-KEYWORD,openai,🤖AI
+ - DOMAIN-KEYWORD,claude,🤖AI
  - DOMAIN-SUFFIX,auth0.com,🤖AI
  - DOMAIN-SUFFIX,challenges.cloudflare.com,🤖AI
  - DOMAIN-SUFFIX,client-api.arkoselabs.com,🤖AI
@@ -322,6 +324,7 @@ rules:
  - DOMAIN-SUFFIX,api.githubcopilot.com,🤖AI
  - DOMAIN-SUFFIX,copilot.microsoft.com,🤖AI
  - DOMAIN-SUFFIX,bing.com,🤖AI
+ - DOMAIN-SUFFIX,claude.ai,🤖AI
  - DOMAIN-SUFFIX,msftconnecttest.com,Ⓜ️微软服务
  - DOMAIN-SUFFIX,msftncsi.com,Ⓜ️微软服务
  - DOMAIN-SUFFIX,microsoft.com,Ⓜ️微软服务
