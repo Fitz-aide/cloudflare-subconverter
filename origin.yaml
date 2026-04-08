@@ -294,13 +294,8 @@ rules:
  - IP-CIDR,188.122.83.0/24,✅节点选择
  - IP-CIDR,43.239.137.0/24,✅节点选择
  - DOMAIN,apple.com,🍎苹果
- - DOMAIN,gspe1-ssl.ls.apple.com,🍎苹果
- - DOMAIN,iosapps.itunes.apple.com,🍎苹果
- - DOMAIN,itunes.apple.com,🍎苹果
- - DOMAIN,np-edge.itunes.apple.com,🍎苹果
- - DOMAIN,play-edge.itunes.apple.com,🍎苹果
- - DOMAIN-SUFFIX,tv.apple.com,🍎苹果
- - DOMAIN-SUFFIX,iadsdk.apple.com,🍎苹果
+ - DOMAIN-KEYWORD,apple.com,🍎苹果
+ - DOMAIN-SUFFIX,apple.com,🍎苹果
  - DOMAIN-KEYWORD,ai,🤖AI
  - DOMAIN-KEYWORD,openai,🤖AI
  - DOMAIN-KEYWORD,claude,🤖AI
