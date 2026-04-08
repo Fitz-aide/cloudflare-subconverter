@@ -41,7 +41,7 @@ const INSERT_AFTER_GROUP = "🅰️Adobe";
 // includeAllNodes: 是否要把所有抓取到的单个节点名称也全塞进去
 const PARENT_GROUPS_CONFIG = [
   { target: "✅节点选择", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
-  { target: "🕸GPT", position: "back", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
+  { target: "🤖AI", position: "back", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
   { target: "🎧Spotify", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
   { target: "🍎苹果", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
   { target: "🚀最低延迟", position: "front", includeTypes: [], includeAllNodes: true },
