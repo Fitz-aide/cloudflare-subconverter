@@ -278,16 +278,9 @@ rules:
  - DOMAIN-KEYWORD,twitter,✅节点选择
  - DOMAIN-SUFFIX,telegram.me,✅节点选择
  - DOMAIN-SUFFIX,telegram.org,✅节点选择
+ - DOMAIN-KEYWORD,discord,✅节点选择
+ - DOMAIN-KEYWORD,discord.com,✅节点选择
  - DOMAIN-SUFFIX,discord.com,✅节点选择
- - DOMAIN-SUFFIX,discordapp.com,✅节点选择
- - DOMAIN-SUFFIX,discord.gg,✅节点选择
- - DOMAIN-SUFFIX,discordapp.net,✅节点选择
- - DOMAIN-SUFFIX,discordmedia.io,✅节点选择
- - DOMAIN-SUFFIX,discordapp.io,✅节点选择
- - DOMAIN-SUFFIX,discordstatus.com,✅节点选择
- - DOMAIN-SUFFIX,discord.com.edgesuite.net,✅节点选择
- - DOMAIN-SUFFIX,discord.com.cdn.cloudflare.net,✅节点选择
- - DOMAIN-SUFFIX,discord.com.cloudflare.net,✅节点选择
  - IP-CIDR,66.22.192.0/18,✅节点选择
  - IP-CIDR,162.159.128.0/17,✅节点选择
  - IP-CIDR,185.50.107.0/24,✅节点选择
