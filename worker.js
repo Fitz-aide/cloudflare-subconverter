@@ -290,7 +290,7 @@ function buildFullClash(template, proxies) {
         const groupName = `${t.icon}${prefix}${t.suffix}`;
         activeDynamicGroupsByRegion[prefix].push(groupName);
         // 生成对应组的基础配置 (测速 URL、间隔等)
-        dynamicGroupsYaml += `  - name: "${groupName}"\n    type: ${t.type}\n    url: http://cp.cloudflare.com/generate_204\n    interval: 600\n    tolerance: 300\n    proxies:\n`;
+        dynamicGroupsYaml += `  - name: "${groupName}"\n    type: ${t.type}\n    url: http://www.msftconnecttest.com/connecttest.txt\n    interval: 600\n    tolerance: 300\n    proxies:\n`;
         // 将该地区下的所有节点塞进这个组里
         nodes.forEach(n => dynamicGroupsYaml += `      - "${n}"\n`);
       }

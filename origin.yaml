@@ -116,19 +116,19 @@ proxy-groups:
       - ✅节点选择 
   - name: ♻️自动切换
     type: fallback
-    url: http://cp.cloudflare.com/generate_204
+    url: http://www.msftconnecttest.com/connecttest.txt
     interval: 600
     tolerance: 300
     proxies:
   - name: 🚀最低延迟
     type: url-test
-    url: http://cp.cloudflare.com/generate_204
+    url: http://www.msftconnecttest.com/connecttest.txt
     interval: 600
     tolerance: 300
     proxies:    
   - name: ⚖️负载均衡
     type: load-balance
-    url: http://cp.cloudflare.com/generate_204
+    url: http://www.msftconnecttest.com/connecttest.txt
     interval: 600
     tolerance: 300
     proxies:
@@ -149,12 +149,11 @@ proxy-groups:
       - ✅节点选择
       - 🔗直连
 rules:
- - DOMAIN-KEYWORD,spotify.com,🎧Spotify
+ - DOMAIN-KEYWORD,spotify,🎧Spotify
  - DOMAIN-SUFFIX,spotify.com,🎧Spotify
  - DOMAIN-SUFFIX,spotifycdn.com,🎧Spotify
  - DOMAIN-SUFFIX,spotifycdn.net,🎧Spotify
  - DOMAIN-SUFFIX,e.wxriw.cn,🎧Spotify
- - DOMAIN-KEYWORD,spotify,🎧Spotify
  - DOMAIN-KEYWORD,lyricify,🎧Spotify
  - DOMAIN-SUFFIX,pubg1.battleye.com,✅节点选择
  - DOMAIN-SUFFIX,akamaihd.net,✅节点选择
@@ -233,8 +232,9 @@ rules:
  - IP-CIDR,107.22.0.0/16,✅节点选择,no-resolve
  - DOMAIN-SUFFIX,mahjongg.yam.com,✅节点选择
  - DOMAIN-SUFFIX,3g2u.com,✅节点选择
- - DOMAIN-KEYWORD,gametower.com,✅节点选择
- - DOMAIN-KEYWORD,gametower.com.tw,✅节点选择
+ - DOMAIN-KEYWORD,gametower,✅节点选择
+ - DOMAIN-SUFFIX,gametower.com,✅节点选择
+ - DOMAIN-SUFFIX,gametower.com.tw,✅节点选择
  - DOMAIN-SUFFIX,gametower.com,✅节点选择
  - DOMAIN-SUFFIX,gametower.com.tw,✅节点选择
  - DOMAIN-SUFFIX,yfsp.tv,✅节点选择
@@ -287,7 +287,7 @@ rules:
  - IP-CIDR,188.122.83.0/24,✅节点选择
  - IP-CIDR,43.239.137.0/24,✅节点选择
  - DOMAIN,apple.com,🍎苹果
- - DOMAIN-KEYWORD,apple.com,🍎苹果
+ - DOMAIN-KEYWORD,apple,🍎苹果
  - DOMAIN-SUFFIX,apple.com,🍎苹果
  - DOMAIN-KEYWORD,ai,🤖AI
  - DOMAIN-KEYWORD,openai,🤖AI
@@ -450,7 +450,7 @@ rules:
  - DOMAIN,accounts.youtube.com,✅节点选择
  - DOMAIN-SUFFIX,googletraveladservices.com,✅节点选择
  - DOMAIN-SUFFIX,elricaide.workers.dev,✅节点选择
- - DOMAIN-KEYWORD,workers.dev,✅节点选择
+ - DOMAIN-SUFFIX,workers.dev,✅节点选择
  - DOMAIN-SUFFIX,tracking-protection.cdn.mozilla.net,🔗直连
  - DOMAIN,origin-a.akamaihd.net,🔗直连
  - DOMAIN,xivanalysis.com,🔗直连
@@ -2226,7 +2226,7 @@ rules:
  - DOMAIN-SUFFIX,yammerusercontent.com,✅节点选择
  - DOMAIN-SUFFIX,edgedatg.com,✅节点选择
  - DOMAIN-SUFFIX,go.com,✅节点选择
- - DOMAIN-KEYWORD,abematv.akamaized.net,✅节点选择
+ - DOMAIN-SUFFIX,abematv.akamaized.net,✅节点选择
  - DOMAIN-SUFFIX,abema.io,✅节点选择
  - DOMAIN-SUFFIX,abema.tv,✅节点选择
  - DOMAIN-SUFFIX,ameba.jp,✅节点选择
