@@ -164,6 +164,10 @@ rules:
  - DOMAIN-SUFFIX,spotifycdn.net,🎧Spotify
  - DOMAIN-SUFFIX,e.wxriw.cn,🎧Spotify
  - DOMAIN-KEYWORD,lyricify,🎧Spotify
+ - DOMAIN-SUFFIX,lyricify.com,🎧Spotify
+ - DOMAIN-SUFFIX,lyricify.app,🎧Spotify
+ - DOMAIN-SUFFIX,i.scdn.co,🎧Spotify
+ - DOMAIN-SUFFIX,mosaic.scdn.co,🎧Spotify
  - DOMAIN-SUFFIX,pubg1.battleye.com,✅节点选择
  - DOMAIN-SUFFIX,akamaihd.net,✅节点选择
  - DOMAIN-SUFFIX,akamai.net,✅节点选择
