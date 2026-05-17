@@ -95,9 +95,7 @@ proxy-groups:
   - name: ✅节点选择
     type: select
     proxies:
-      - 🚀最低延迟
       - ♻️自动切换
-      - ⚖️负载均衡
       - DIRECT
   - name: 🤖AI
     type: select
@@ -105,7 +103,6 @@ proxy-groups:
   - name: 🎧Spotify
     type: select
     proxies:
-      - 🚀最低延迟
       - ♻️自动切换
   - name: Ⓜ️微软服务
     type: select
@@ -124,22 +121,10 @@ proxy-groups:
       - DIRECT
       - ✅节点选择 
   - name: ♻️自动切换
-    type: fallback
-    url: http://www.msftconnecttest.com/connecttest.txt
-    interval: 600
-    tolerance: 300
-    proxies:
-  - name: 🚀最低延迟
     type: url-test
-    url: http://www.msftconnecttest.com/connecttest.txt
-    interval: 600
-    tolerance: 300
-    proxies:    
-  - name: ⚖️负载均衡
-    type: load-balance
-    url: http://www.msftconnecttest.com/connecttest.txt
-    interval: 600
-    tolerance: 300
+    url: http://cp.cloudflare.com/generate_204
+    interval: 300
+    tolerance: 50
     proxies:
   - name: 🔗直连
     type: select

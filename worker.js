@@ -23,10 +23,9 @@ const REGIONS = [
 ];
 
 // 2. 动态策略组生成规则
-// 如果检测到上方某个地区有节点（例如有日本节点），就会自动生成 "🇯🇵JP最低延迟" 和 "🇯🇵JP自动切换" 两个策略组。
+// 如果检测到上方某个地区有节点（例如有日本节点），就会自动生成 "🇯🇵JP自动切换" 策略组。
 const DYNAMIC_GROUP_TYPES = [
-  { suffix: "最低延迟", type: "url-test", icon: "🚀" }, // 自动测速选择最低延迟节点
-  { suffix: "自动切换", type: "fallback", icon: "♻️" } // 节点故障时按顺序自动切换
+  { suffix: "自动切换", type: "url-test", icon: "♻️" } // 自动测速选择节点
 ];
 
 // 3. 锚点策略组
@@ -40,13 +39,11 @@ const INSERT_AFTER_GROUP = "🅰️Adobe";
 // includeTypes: 包含哪些动态生成的地区组类型
 // includeAllNodes: 是否要把所有抓取到的单个节点名称也全塞进去
 const PARENT_GROUPS_CONFIG = [
-  { target: "✅节点选择", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
-  { target: "🤖AI", position: "back", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: true },
-  { target: "🎧Spotify", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
-  { target: "🍎苹果", position: "front", includeTypes: ["最低延迟", "自动切换"], includeAllNodes: false },
-  { target: "🚀最低延迟", position: "front", includeTypes: [], includeAllNodes: true },
+  { target: "✅节点选择", position: "front", includeTypes: ["自动切换"], includeAllNodes: true },
+  { target: "🤖AI", position: "back", includeTypes: ["自动切换"], includeAllNodes: true },
+  { target: "🎧Spotify", position: "front", includeTypes: ["自动切换"], includeAllNodes: false },
+  { target: "🍎苹果", position: "front", includeTypes: ["自动切换"], includeAllNodes: false },
   { target: "♻️自动切换", position: "front", includeTypes: [], includeAllNodes: true },
-  { target: "⚖️负载均衡", position: "front", includeTypes: [], includeAllNodes: true }
 ];
 
 // ================= 3. 主逻辑处理区 =================
@@ -279,7 +276,7 @@ function buildFullClash(template, proxies) {
   // 如果模板有 proxies 块就替换掉它，没有就在 proxies 标签后直接追加
   finalYaml = proxyRegex.test(finalYaml) ? finalYaml.replace(proxyRegex, proxyYaml + "\n") : finalYaml.replace("proxies:", proxyYaml);
 
-  // 3. 构建动态地区策略组的 YAML 文本 (例如: JP最低延迟, HK自动切换)
+  // 3. 构建动态地区策略组的 YAML 文本 (例如: HK自动切换)
   let dynamicGroupsYaml = "";
   let activeDynamicGroupsByRegion = {}; // 记录实际生成了哪些组
 
@@ -287,10 +284,10 @@ function buildFullClash(template, proxies) {
     if (nodes.length > 0) { // 只有当该地区存在至少一个节点时，才生成对应的组
       activeDynamicGroupsByRegion[prefix] = [];
       for (const t of DYNAMIC_GROUP_TYPES) {
-        const groupName = `${t.icon}${prefix}${t.suffix}`;
+        const groupName = `${prefix}${t.icon}${t.suffix}`;
         activeDynamicGroupsByRegion[prefix].push(groupName);
         // 生成对应组的基础配置 (测速 URL、间隔等)
-        dynamicGroupsYaml += `  - name: "${groupName}"\n    type: ${t.type}\n    url: http://www.msftconnecttest.com/connecttest.txt\n    interval: 600\n    tolerance: 300\n    proxies:\n`;
+        dynamicGroupsYaml += `  - name: "${groupName}"\n    type: ${t.type}\n    url: http://cp.cloudflare.com/generate_204\n    interval: 600\n    tolerance: 300\n    proxies:\n`;
         // 将该地区下的所有节点塞进这个组里
         nodes.forEach(n => dynamicGroupsYaml += `      - "${n}"\n`);
       }
