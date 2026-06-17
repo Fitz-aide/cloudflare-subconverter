@@ -158,10 +158,11 @@ rules:
 - GEOSITE,telegram,✅节点选择
 - GEOSITE,whatsapp,✅节点选择
 - GEOSITE,discord,✅节点选择
-- GEOSITE,openai,✅节点选择
-- GEOSITE,anthropic,✅节点选择
-- GEOSITE,gemini,✅节点选择
-- GEOSITE,github-copilot,✅节点选择
+- GEOSITE,openai,🤖AI
+- GEOSITE,anthropic,🤖AI
+- GEOSITE,github-copilot,🤖AI
+- DOMAIN-SUFFIX,gemini.gstatic.com,🤖AI
+- DOMAIN-SUFFIX,gemini.google.com,🤖AI
 - GEOSITE,apple,🍎苹果
 - GEOSITE,microsoft,Ⓜ️微软服务
 - GEOSITE,google,✅节点选择
