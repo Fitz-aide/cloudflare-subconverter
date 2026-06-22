@@ -63,7 +63,7 @@ dns:
   - geoip:cn
 tun:
   enable: true
-  stack: gvisor
+  stack: mixed
   auto-route: true
   auto-detect-interface: true
   strict-route: true
