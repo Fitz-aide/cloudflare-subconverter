@@ -137,36 +137,67 @@ geox-url:
   mmdb: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb
 geodata-mode: true
 rules:
-- DOMAIN-SUFFIX,local,🔗直连
-- DOMAIN-SUFFIX,localhost,🔗直连
-- IP-CIDR,192.168.0.0/16,🔗直连,no-resolve
-- IP-CIDR,10.0.0.0/8,🔗直连,no-resolve
-- IP-CIDR,127.0.0.0/8,🔗直连,no-resolve
-- IP-CIDR,100.64.0.0/10,🔗直连,no-resolve
-- GEOSITE,category-ads-all,⛔拦截
-- GEOSITE,spotify,🎧Spotify
-- GEOSITE,steam,✅节点选择
-- GEOSITE,epicgames,✅节点选择
-- GEOSITE,ea,✅节点选择
-- GEOSITE,pubg,✅节点选择
-- PROCESS-NAME,TslGame.exe,✅节点选择
-- PROCESS-NAME,TslGame_BE.exe,✅节点选择
-- GEOSITE,tiktok,✅节点选择
-- GEOSITE,facebook,✅节点选择
-- GEOSITE,instagram,✅节点选择
-- GEOSITE,twitter,✅节点选择
-- GEOSITE,telegram,✅节点选择
-- GEOSITE,whatsapp,✅节点选择
-- GEOSITE,discord,✅节点选择
-- GEOSITE,openai,🤖AI
-- GEOSITE,anthropic,🤖AI
-- GEOSITE,github-copilot,🤖AI
-- DOMAIN-SUFFIX,gemini.gstatic.com,🤖AI
-- DOMAIN-SUFFIX,gemini.google.com,🤖AI
-- GEOSITE,apple,🍎苹果
-- GEOSITE,microsoft,Ⓜ️微软服务
-- GEOSITE,google,✅节点选择
-- GEOSITE,cn,🔗直连
-- GEOIP,private,🔗直连
-- GEOIP,CN,🔗直连
-- MATCH,中转
+  # 1. 本地与局域网直连
+  - DOMAIN-SUFFIX,local,🔗直连
+  - DOMAIN-SUFFIX,localhost,🔗直连
+  - IP-CIDR,192.168.0.0/16,🔗直连
+  - IP-CIDR,10.0.0.0/8,🔗直连
+  - IP-CIDR,127.0.0.0/8,🔗直连
+  - IP-CIDR,100.64.0.0/10,🔗直连
+
+  # 2. 广告拦截
+  - GEOSITE,category-ads-all,⛔拦截
+
+  # 3. 音乐与滚动歌词
+  - GEOSITE,spotify,🎧Spotify
+  - DOMAIN-KEYWORD,lyricify,🎧Spotify
+  - DOMAIN-SUFFIX,lyricify.com,🎧Spotify
+  - DOMAIN-SUFFIX,lyricify.top,🎧Spotify
+
+  # 4. 游戏特化
+  - PROCESS-NAME,TslGame.exe,✅节点选择
+  - PROCESS-NAME,TslGame_BE.exe,✅节点选择
+  - GEOSITE,pubg,✅节点选择
+  - GEOSITE,steam,✅节点选择
+  - GEOSITE,epicgames,✅节点选择
+  - GEOSITE,ea,✅节点选择
+
+  # 5. 人工智能
+  - GEOSITE,openai,🤖AI
+  - GEOSITE,anthropic,🤖AI
+  - GEOSITE,github-copilot,🤖AI
+  - GEOSITE,google-gemini,🤖AI
+  - DOMAIN-SUFFIX,gemini.gstatic.com,🤖AI
+  - DOMAIN-SUFFIX,gemini.google.com,🤖AI
+
+  # 6. 社交媒体
+  - GEOSITE,tiktok,✅节点选择
+  - GEOSITE,facebook,✅节点选择
+  - GEOSITE,instagram,✅节点选择
+  - GEOSITE,twitter,✅节点选择
+  - GEOSITE,telegram,✅节点选择
+  - GEOSITE,whatsapp,✅节点选择
+  - GEOSITE,discord,✅节点选择
+
+  # 7. 国际大厂大类
+  - GEOSITE,apple,🍎苹果
+  - GEOSITE,microsoft,Ⓜ️微软服务
+  - GEOSITE,google,✅节点选择
+
+  # 8. 影视特化
+  - GEOSITE,netflix,✅节点选择
+  - GEOSITE,disney,✅节点选择
+  - DOMAIN-SUFFIX,yfsp.tv,✅节点选择
+  - DOMAIN-SUFFIX,jable.tv,✅节点选择
+  - DOMAIN-SUFFIX,ziziys.net,✅节点选择
+  - DOMAIN-SUFFIX,dmmiku.net,✅节点选择
+  - DOMAIN-SUFFIX,5dm.link,✅节点选择
+  - DOMAIN-SUFFIX,agedm.io,✅节点选择
+
+  # 9. 直连兜底
+  - GEOSITE,cn,🔗直连
+  - GEOIP,private,🔗直连
+  - GEOIP,CN,🔗直连
+
+  # 10. 漏网之鱼
+  - MATCH,中转
