@@ -132,9 +132,9 @@ proxy-groups:
       - ✅节点选择
       - 🔗直连
 geox-url:
-  geosite: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
-  geoip: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
-  mmdb: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb
+  geosite: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat@release/geosite.dat
+  geoip: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat@release/geoip.dat
+  mmdb: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat@release/country.mmdb
 geodata-mode: true
 rules:
   # 1. 本地与局域网直连
