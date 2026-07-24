@@ -136,6 +136,23 @@ geox-url:
   geoip: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat@release/geoip.dat
   mmdb: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat@release/country.mmdb
 geodata-mode: true
+# 1. 声明规则集 (Rule Providers)
+rule-providers:
+  # 专门拦截 Spotify 广告的规则集
+  spotify_ads:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Blackmatrix7/ios_rule_script@master/rule/Clash/Spotify/Spotify.yaml"
+    path: ./rules/spotify_ads.yaml
+    interval: 86400
+
+  # 通用广告拦截规则集
+  advertising:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./rules/reject.yaml
+    interval: 86400
 rules:
   # 1. 本地与局域网直连
   - DOMAIN-SUFFIX,local,🔗直连
@@ -146,6 +163,8 @@ rules:
   - IP-CIDR,100.64.0.0/10,🔗直连
 
   # 2. 广告拦截
+  - RULE-SET,spotify_ads,REJECT
+  - RULE-SET,advertising,REJECT
   - GEOSITE,category-ads-all,⛔拦截
 
   # 3. 音乐与滚动歌词
