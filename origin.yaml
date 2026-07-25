@@ -180,6 +180,7 @@ rules:
   - GEOSITE,discord,✅节点选择
 
   # 7. 国际大厂大类
+  - GEOSITE,github,✅节点选择
   - GEOSITE,apple,🍎苹果
   - GEOSITE,microsoft,Ⓜ️微软服务
   - GEOSITE,google,✅节点选择
